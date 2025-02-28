@@ -1,0 +1,1701 @@
+<?php
+// Agregar esta función al principio del archivo vista.php, justo después de la etiqueta inicial <?php
+
+/**
+ * Función para formatear cantidades mostrando decimales solo cuando es necesario
+ * 
+ * @param float|int $cantidad La cantidad a formatear
+ * @return string Cantidad formateada
+ */
+function formatearCantidad($cantidad) {
+    // Convertir a float para asegurar que la comparación funciona correctamente
+    $cantidad = floatval($cantidad);
+    
+    // Verificar si la cantidad tiene decimales
+    if ($cantidad == floor($cantidad)) {
+        // Es un número entero (sin decimales)
+        return number_format($cantidad, 0);
+    } else {
+        // Tiene decimales, mostramos hasta 3 decimales
+        return number_format($cantidad, 3);
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Pedidos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Navbar Mejorado a agregar al inicio de vista.php, justo después de la etiqueta <body> -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <a href="index.php" class="navbar-brand">
+                    <i class="fas fa-boxes me-2"></i>
+                    Sistema de Gestión de Pedidos
+                </a>
+
+                <div class="d-flex align-items-center gap-3">
+                    <a href="index.php" class="nav-link <?php echo !$mostrar_productos && !$cliente_id ? 'active' : ''; ?>">
+                        <i class="fas fa-users me-1"></i>
+                        <span class="d-none d-md-inline">Clientes</span>
+                    </a>
+
+                    <a href="?productos=1" class="nav-link <?php echo $mostrar_productos ? 'active' : ''; ?>">
+                        <i class="fas fa-box me-1"></i>
+                        <span class="d-none d-md-inline">Productos</span>
+                    </a>
+
+                    <?php if ($cliente_id): ?>
+                        <a href="index.php?cliente_id=<?php echo $cliente_id; ?>" class="nav-link active">
+                            <i class="fas fa-shopping-cart me-1"></i>
+                            <span class="d-none d-md-inline">Pedidos</span>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+
+    <?php
+    // Añadir este código en la vista de pedidos (justo después de la barra de navegación del pedido)
+    if (isset($_GET['success']) || isset($_GET['error'])):
+    ?>
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <?php
+                switch ($_GET['success']) {
+                    case 'pedido_actualizado':
+                        echo "Pedido actualizado con éxito";
+                        break;
+                    default:
+                        echo "Operación completada con éxito";
+                }
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['error'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php
+                switch ($_GET['error']) {
+                    case 'error_editar_pedido':
+                        echo "Error al editar el pedido. Es posible que no se pueda reducir la cantidad por debajo de lo ya entregado o el pedido esté completado.";
+                        break;
+                    default:
+                        echo "Ha ocurrido un error en la operación";
+                }
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+    <div class="container">
+
+        <?php
+        if (isset($_GET['success']) || isset($_GET['error'])):
+        ?>
+            <?php if (isset($_GET['success'])): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?php
+                    switch ($_GET['success']) {
+                        case 'cliente_eliminado':
+                            echo "Cliente eliminado con éxito";
+                            break;
+                        default:
+                            echo "Operación completada con éxito";
+                    }
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['error'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php
+                    switch ($_GET['error']) {
+                        case 'error_eliminar_cliente':
+                            echo isset($_GET['mensaje']) ? $_GET['mensaje'] : "Error al eliminar cliente";
+                            break;
+                        default:
+                            echo "Ha ocurrido un error en la operación";
+                    }
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if (!$cliente_id && !$mostrar_productos): ?>
+            <div class="dashboard animate-fade-in">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="mb-0">Clientes y sus Productos Favoritos</h2>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAgregarCliente">
+                        <i class="fas fa-user-plus me-2"></i>Agregar Cliente
+                    </button>
+                </div>
+
+                <div class="row">
+                    <?php foreach ($clientes as $cliente):
+                        $info_producto = ['cantidad_solicitada' => 0, 'cantidad_entregada' => 0];
+                        if (!empty($cliente['producto_favorito_id'])) {
+                            $info_producto = obtenerInfoProductoFavorito($pdo, $cliente['id'], $cliente['producto_favorito_id']);
+                        }
+
+                        $porcentaje_entrega = 0;
+                        if ($info_producto['cantidad_solicitada'] > 0) {
+                            $porcentaje_entrega = ($info_producto['cantidad_entregada'] / $info_producto['cantidad_solicitada']) * 100;
+                        }
+
+                        $estado_clase = 'bg-secondary';
+                        $estado_texto = 'Sin pedidos';
+
+                        if ($info_producto['cantidad_solicitada'] > 0) {
+                            if ($info_producto['cantidad_entregada'] == 0) {
+                                $estado_clase = 'badge-pendiente';
+                                $estado_texto = 'Pendiente';
+                            } elseif ($info_producto['cantidad_entregada'] < $info_producto['cantidad_solicitada']) {
+                                $estado_clase = 'badge-parcial';
+                                $estado_texto = 'Parcial';
+                            } else {
+                                $estado_clase = 'badge-completado';
+                                $estado_texto = 'Completado';
+                            }
+                        }
+
+                        // Obtener las iniciales para el avatar
+                        $iniciales = strtoupper(substr($cliente['nombre'], 0, 1));
+                        if (strpos($cliente['nombre'], ' ') !== false) {
+                            $partes = explode(' ', $cliente['nombre']);
+                            $iniciales = strtoupper(substr($partes[0], 0, 1) . substr(end($partes), 0, 1));
+                        }
+                    ?>
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="cliente-card animate-fade-in">
+                                <!-- Botones de acción en la esquina superior derecha -->
+                                <div class="cliente-acciones">
+                                    <button class="btn btn-warning btn-sm btn-cliente-accion"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEditarCliente"
+                                        data-id="<?php echo $cliente['id']; ?>"
+                                        data-nombre="<?php echo htmlspecialchars($cliente['nombre']); ?>"
+                                        data-telefono="<?php echo htmlspecialchars($cliente['telefono']); ?>"
+                                        data-email="<?php echo htmlspecialchars($cliente['email']); ?>"
+                                        data-producto-favorito-id="<?php echo $cliente['producto_favorito_id']; ?>">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm btn-cliente-accion"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEliminarCliente"
+                                        data-id="<?php echo $cliente['id']; ?>"
+                                        data-nombre="<?php echo htmlspecialchars($cliente['nombre']); ?>">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Información principal del cliente -->
+                                <div class="cliente-info">
+                                    <div class="cliente-avatar">
+                                        <?php echo $iniciales; ?>
+                                    </div>
+                                    <div class="cliente-details">
+                                        <h3 class="cliente-name"><?php echo htmlspecialchars($cliente['nombre']); ?></h3>
+
+                                        <?php if (!empty($cliente['telefono'])): ?>
+                                            <div class="cliente-contact">
+                                                <i class="fas fa-phone text-muted"></i>
+                                                <?php echo htmlspecialchars($cliente['telefono']); ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($cliente['email'])): ?>
+                                            <div class="cliente-contact">
+                                                <i class="fas fa-envelope text-muted"></i>
+                                                <?php echo htmlspecialchars($cliente['email']); ?>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($cliente['producto_favorito_nombre'])): ?>
+                                            <div class="mt-2">
+                                                <span class="badge bg-primary">
+                                                    <i class="fas fa-star me-1"></i>
+                                                    <?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>
+                                                </span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Barra de progreso para producto favorito (si existe) -->
+                                <?php if ($info_producto['cantidad_solicitada'] > 0): ?>
+                                    <div class="mt-3">
+                                        <div class="progress-label">
+                                            <span>Entrega de producto favorito</span>
+                                            <span><?php echo formatearCantidad($info_producto['cantidad_entregada']); ?> / <?php echo formatearCantidad($info_producto['cantidad_solicitada']); ?></span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" role="progressbar"
+                                                style="width: <?php echo $porcentaje_entrega; ?>%"
+                                                aria-valuenow="<?php echo $porcentaje_entrega; ?>"
+                                                aria-valuemin="0"
+                                                aria-valuemax="100"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <span class="badge <?php echo $estado_clase; ?>"><?php echo $estado_texto; ?></span>
+                                            <span class="text-muted small">Actualizado: <?php echo date('d/m/Y'); ?></span>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- Botones de acción principales -->
+                                <div class="d-flex justify-content-between mt-3">
+                                    <a href="?cliente_id=<?php echo $cliente['id']; ?>" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-shopping-cart me-1"></i>Ver Pedidos
+                                    </a>
+
+                                    <?php if (!empty($cliente['producto_favorito_id'])): ?>
+                                        <?php
+                                        // Obtener el último pedido activo que contenga el producto favorito
+                                        $stmt = $pdo->prepare("
+                        SELECT dp.id as detalle_id, ped.id as pedido_id, dp.cantidad, dp.cantidad_entregada
+                        FROM detalles_pedido dp
+                        JOIN pedidos ped ON dp.pedido_id = ped.id
+                        WHERE ped.cliente_id = ? 
+                        AND dp.producto_id = ? 
+                        AND dp.entregado = 0
+                        ORDER BY ped.fecha_creacion DESC
+                        LIMIT 1
+                    ");
+                                        $stmt->execute([$cliente['id'], $cliente['producto_favorito_id']]);
+                                        $ultimo_pedido_favorito = $stmt->fetch(PDO::FETCH_ASSOC);
+                                        ?>
+
+                                        <?php if ($ultimo_pedido_favorito): ?>
+                                            <button type="button" class="btn btn-success btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalEntregaParcial"
+                                                data-detalle-id="<?php echo $ultimo_pedido_favorito['detalle_id']; ?>"
+                                                data-producto="<?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>"
+                                                data-cantidad-pedida="<?php echo $ultimo_pedido_favorito['cantidad']; ?>"
+                                                data-cantidad-entregada="<?php echo $ultimo_pedido_favorito['cantidad_entregada']; ?>"
+                                                data-cliente-id="<?php echo $cliente['id']; ?>"
+                                                data-pedido-id="<?php echo $ultimo_pedido_favorito['pedido_id']; ?>">
+                                                <i class="fas fa-truck me-1"></i>
+                                                Entregar <?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="btn btn-secondary btn-sm" disabled>
+                                                <i class="fas fa-truck me-1"></i>
+                                                Sin pedido activo
+                                            </button>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <button class="btn btn-outline-primary btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEditarCliente"
+                                            data-id="<?php echo $cliente['id']; ?>"
+                                            data-nombre="<?php echo htmlspecialchars($cliente['nombre']); ?>"
+                                            data-telefono="<?php echo htmlspecialchars($cliente['telefono']); ?>"
+                                            data-email="<?php echo htmlspecialchars($cliente['email']); ?>">
+                                            <i class="fas fa-star me-1"></i>
+                                            Definir favorito
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <?php if (empty($clientes)): ?>
+                        <div class="col-12 text-center py-5">
+                            <div class="empty-state">
+                                <i class="fas fa-users text-muted mb-3" style="font-size: 3rem;"></i>
+                                <h3>No hay clientes registrados</h3>
+                                <p class="text-muted">Comienza agregando clientes a tu sistema</p>
+                                <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#modalAgregarCliente">
+                                    <i class="fas fa-user-plus me-2"></i>Agregar Cliente
+                                </button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                </table>
+            </div>
+    </div>
+    <!-- El resto del código sigue igual... -->
+<?php elseif ($mostrar_productos): ?>
+    <div class="dashboard animate-fade-in">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-boxes me-2"></i>Gestión de Productos</h2>
+            <div>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
+                    <i class="fas fa-plus me-2"></i>Nuevo Producto
+                </button>
+                <a href="index.php" class="btn btn-secondary ms-2">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <?php
+                switch ($_GET['success']) {
+                    case 'producto_agregado':
+                        echo "Producto añadido con éxito";
+                        break;
+                    case 'producto_editado':
+                        echo "Producto actualizado con éxito";
+                        break;
+                    case 'producto_eliminado':
+                        echo "Producto eliminado con éxito";
+                        break;
+                    default:
+                        echo "Operación completada con éxito";
+                }
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['error'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php
+                switch ($_GET['error']) {
+                    case 'error_agregar_producto':
+                        echo "Error al agregar el producto";
+                        break;
+                    case 'error_editar_producto':
+                        echo "Error al actualizar el producto";
+                        break;
+                    case 'error_eliminar_producto':
+                        echo "No se puede eliminar el producto porque está siendo utilizado en pedidos";
+                        break;
+                    default:
+                        echo "Ha ocurrido un error en la operación";
+                }
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Tabla de productos -->
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Precio</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $productos = obtenerProductos($pdo);
+                    foreach ($productos as $producto):
+                    ?>
+                        <tr>
+                            <td><?php echo $producto['id']; ?></td>
+                            <td><?php echo htmlspecialchars($producto['nombre']); ?></td>
+                            <td><?php echo htmlspecialchars($producto['descripcion'] ?? ''); ?></td>
+                            <td><?php echo number_format($producto['precio'], 2); ?> €</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" data-bs-toggle="modal"
+                                    data-bs-target="#modalEditarProducto"
+                                    data-id="<?php echo $producto['id']; ?>"
+                                    data-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>"
+                                    data-descripcion="<?php echo htmlspecialchars($producto['descripcion'] ?? ''); ?>"
+                                    data-precio="<?php echo $producto['precio']; ?>">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </button>
+                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal"
+                                    data-bs-target="#modalEliminarProducto"
+                                    data-id="<?php echo $producto['id']; ?>"
+                                    data-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>">
+                                    <i class="fas fa-trash-alt me-1"></i>Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+
+                    <?php if (empty($productos)): ?>
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <i class="fas fa-box-open text-muted mb-3" style="font-size: 3rem;"></i>
+                                <p>No hay productos registrados</p>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+<?php else: ?>
+    <div class="pedidos-container animate-fade-in">
+        <?php
+            $pedidos = obtenerPedidosCliente($pdo, $cliente_id);
+            $cliente_actual = null;
+            foreach ($clientes as $c) {
+                if ($c['id'] == $cliente_id) {
+                    $cliente_actual = $c;
+                    break;
+                }
+            }
+        ?>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Pedidos de <?php echo htmlspecialchars($cliente_actual['nombre']); ?></h2>
+            <div>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevoPedido">
+                    <i class="fas fa-plus me-2"></i>
+                    Nuevo Pedido
+                </button>
+                <a href="index.php" class="btn btn-secondary ms-2">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Volver a Clientes
+                </a>
+            </div>
+        </div>
+
+        <?php if (!$ver_todos && $pedido_id): ?>
+            <a href="?cliente_id=<?php echo $cliente_id; ?>&ver_todos=1" class="btn btn-info mb-3">
+                <i class="fas fa-list me-2"></i>
+                Ver todos los pedidos
+            </a>
+        <?php endif; ?>
+
+        <?php if ($ver_todos || !$pedido_id): ?>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Estado</th>
+                            <th>Total</th>
+                            <th>Fecha Creación</th>
+                            <th>Fecha Actualización</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($pedidos as $pedido):
+                            $total_pedido = calcularTotalPedido($pdo, $pedido['id']);
+                        ?>
+                            <tr>
+                                <td><?php echo $pedido['id']; ?></td>
+                                <td>
+                                    <span class="badge badge-estado badge-<?php echo $pedido['estado']; ?>">
+                                        <?php echo ucfirst(str_replace('_', ' ', $pedido['estado'])); ?>
+                                    </span>
+                                </td>
+                                <td><?php echo number_format($total_pedido, 2); ?> €</td>
+                                <td><?php echo $pedido['fecha_creacion']; ?></td>
+                                <td><?php echo $pedido['fecha_actualizacion'] ?? '-'; ?></td>
+                                <td>
+                                    <a href="?cliente_id=<?php echo $cliente_id; ?>&pedido_id=<?php echo $pedido['id']; ?>" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>
+                                        Ver Detalles
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                        <?php if (empty($pedidos)): ?>
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <i class="fas fa-inbox text-muted mb-3" style="font-size: 3rem;"></i>
+                                    <p>No hay pedidos para este cliente</p>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+        <?php if ($pedido_id):
+                $pedido_actual = obtenerPedido($pdo, $pedido_id);
+                $detalles_pedido = obtenerDetallesPedido($pdo, $pedido_id);
+                $total_pedido = calcularTotalPedido($pdo, $pedido_id);
+        ?>
+            <div class="card mt-4 animate-fade-in">
+                <div class="card-header">
+                    <h3 class="m-0">Detalles del Pedido #<?php echo $pedido_id; ?></h3>
+                    <div>
+                        <span class="badge badge-estado badge-<?php echo $pedido_actual['estado']; ?>">
+                            <?php echo ucfirst(str_replace('_', ' ', $pedido_actual['estado'])); ?>
+                        </span>
+                        <?php if ($pedido_actual['estado'] != 'completado'): ?>
+                            <!-- El botón de editar solo aparece para pedidos NO completados -->
+                            <button type="button" class="btn btn-warning ms-2" id="btnEditarPedido" data-bs-toggle="modal" data-bs-target="#modalEditarPedido" data-pedido-id="<?php echo $pedido_id; ?>">
+                                <i class="fas fa-edit me-2"></i>Editar Pedido
+                            </button>
+                        <?php endif; ?>
+                        <?php if ($pedido_actual['estado'] == 'completado'): ?>
+                            <a href="?descargar_factura=1&pedido_id=<?php echo $pedido_id; ?>&cliente_id=<?php echo $cliente_id; ?>"
+                                class="btn btn-success ms-2">
+                                <i class="fas fa-file-invoice me-2"></i>Descargar Factura
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <strong>Fecha de creación:</strong>
+                            <span><?php echo $pedido_actual['fecha_creacion']; ?></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Última actualización:</strong>
+                            <span><?php echo $pedido_actual['fecha_actualizacion'] ?? 'N/A'; ?></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Total del pedido:</strong>
+                            <span><?php echo number_format($total_pedido, 2); ?> €</span>
+                        </div>
+                    </div>
+
+                    <h4 class="mb-3">Productos</h4>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Precio Unitario</th>
+                                    <th>Cantidad Solicitada</th>
+                                    <th>Cantidad Entregada</th>
+                                    <th>Estado Entrega</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($detalles_pedido as $detalle):
+                                    $subtotal = $detalle['cantidad'] * $detalle['precio'];
+                                    $estado_entrega = $detalle['entregado'] ? 'Completado' : ($detalle['cantidad_entregada'] > 0 ? 'Parcial' : 'Pendiente');
+                                ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($detalle['producto_nombre']); ?></td>
+                                        <td><?php echo number_format($detalle['precio'], 2); ?> €</td>
+                                        <td><?php echo $detalle['cantidad']; ?></td>
+                                        <td><?php echo $detalle['cantidad_entregada']; ?></td>
+                                        <td>
+                                            <span class="badge <?php
+                                                                echo $estado_entrega == 'Completado' ? 'bg-success' : ($estado_entrega == 'Parcial' ? 'bg-warning' : 'bg-secondary');
+                                                                ?>">
+                                                <?php echo $estado_entrega; ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php if (!$detalle['entregado']): ?>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                        data-bs-target="#modalEntregaParcial"
+                                                        data-detalle-id="<?php echo $detalle['id']; ?>"
+                                                        data-producto="<?php echo htmlspecialchars($detalle['producto_nombre']); ?>"
+                                                        data-cantidad-pedida="<?php echo $detalle['cantidad']; ?>"
+                                                        data-cantidad-entregada="<?php echo $detalle['cantidad_entregada']; ?>">
+                                                        <i class="fas fa-truck me-1"></i>
+                                                        Registrar Entrega
+                                                    </button>
+
+                                                    <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                                        data-bs-target="#modalMarcarEntregado"
+                                                        data-detalle-id="<?php echo $detalle['id']; ?>"
+                                                        data-producto="<?php echo htmlspecialchars($detalle['producto_nombre']); ?>">
+                                                        <i class="fas fa-check me-1"></i>
+                                                        Marcar Completado
+                                                    </button>
+
+                                                    <?php if ($detalle['cantidad_entregada'] > 0): ?>
+                                                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal"
+                                                            data-bs-target="#modalCorregirEntrega"
+                                                            data-detalle-id="<?php echo $detalle['id']; ?>"
+                                                            data-producto="<?php echo htmlspecialchars($detalle['producto_nombre']); ?>"
+                                                            data-cantidad-entregada="<?php echo $detalle['cantidad_entregada']; ?>">
+                                                            <i class="fas fa-edit me-1"></i>
+                                                            Corregir Entrega
+                                                        </button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+
+                                <?php if (empty($detalles_pedido)): ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <i class="fas fa-box-open text-muted mb-3" style="font-size: 3rem;"></i>
+                                            <p>No hay productos en este pedido</p>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
+
+<!-- Modal Agregar Cliente -->
+<div class="modal fade" id="modalAgregarCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Agregar Nuevo Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="agregar_cliente">
+
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">
+                            <i class="fas fa-user me-2"></i>Nombre
+                        </label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="telefono" class="form-label">
+                            <i class="fas fa-phone me-2"></i>Teléfono
+                        </label>
+                        <input type="text" class="form-control" id="telefono" name="telefono">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>Email
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="producto_favorito" class="form-label">
+                            <i class="fas fa-star me-2"></i>Producto Favorito
+                        </label>
+                        <select class="form-select" id="producto_favorito" name="producto_favorito_id">
+                            <option value="">-- Seleccionar producto favorito --</option>
+                            <?php
+                            $productos = obtenerProductos($pdo);
+                            foreach ($productos as $producto):
+                            ?>
+                                <option value="<?php echo $producto['id']; ?>">
+                                    <?php echo htmlspecialchars($producto['nombre']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Tabla de Resumen de Productos -->
+<div class="dashboard animate-fade-in mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resumen de Producción</h2>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th class="text-center">Demandados</th>
+                    <th class="text-center">Entregados</th>
+                    <th class="text-center">Realizados</th>
+                    <th class="text-center">Pendientes</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $resumen_productos = obtenerResumenProductos($pdo);
+                $total_demandados = 0;
+                $total_entregados = 0;
+                $total_realizados = 0;
+                $total_pendientes = 0;
+
+                foreach ($resumen_productos as $producto):
+                    // Acumular totales
+                    $total_demandados += $producto['cantidad_total'];
+                    $total_entregados += $producto['cantidad_entregada'];
+                    $total_realizados += $producto['cantidad_realizada'];
+                    $total_pendientes += $producto['cantidad_pendiente'];
+
+                    // Solo mostrar productos con cantidades > 0
+                    if ($producto['cantidad_total'] > 0 || $producto['cantidad_realizada'] > 0):
+                ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($producto['nombre']); ?></td>
+                            <td class="text-center"><?php echo is_float($producto['cantidad_total']) && fmod($producto['cantidad_total'], 1) !== 0.0 ? number_format($producto['cantidad_total'], 3) : number_format($producto['cantidad_total'], 0); ?></td>
+                            <td class="text-center"><?php echo is_float($producto['cantidad_entregada']) && fmod($producto['cantidad_entregada'], 1) !== 0.0 ? number_format($producto['cantidad_entregada'], 3) : number_format($producto['cantidad_entregada'], 0); ?></td>
+                            <td class="text-center">
+                                <span id="cantidad-realizada-<?php echo $producto['id']; ?>">
+                                    <?php echo is_float($producto['cantidad_realizada']) && fmod($producto['cantidad_realizada'], 1) !== 0.0 ? number_format($producto['cantidad_realizada'], 3) : number_format($producto['cantidad_realizada'], 0); ?>
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span id="cantidad-pendiente-<?php echo $producto['id']; ?>" class="<?php echo $producto['cantidad_pendiente'] > 0 ? 'text-danger fw-bold' : 'text-success'; ?>">
+                                    <?php echo is_float($producto['cantidad_pendiente']) && fmod($producto['cantidad_pendiente'], 1) !== 0.0 ? number_format($producto['cantidad_pendiente'], 3) : number_format($producto['cantidad_pendiente'], 0); ?>
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-primary btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalActualizarRealizado"
+                                    data-producto-id="<?php echo $producto['id']; ?>"
+                                    data-producto-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>"
+                                    data-cantidad-total="<?php echo $producto['cantidad_total']; ?>"
+                                    data-cantidad-realizada="<?php echo $producto['cantidad_realizada']; ?>">
+                                    <i class="fas fa-edit me-1"></i>Actualizar
+                                </button>
+                            </td>
+                        </tr>
+                    <?php
+                    endif;
+                endforeach;
+
+                // Si no hay productos con cantidades
+                if (empty($resumen_productos) || ($total_demandados == 0 && $total_realizados == 0)):
+                    ?>
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-info-circle text-muted mb-3" style="font-size: 2rem;"></i>
+                            <p class="mb-0">No hay productos pendientes de producción</p>
+                        </td>
+                    </tr>
+                <?php else: ?>
+                    <!-- Fila de totales -->
+                    <tr class="table-primary">
+                        <td class="fw-bold">TOTALES</td>
+                        <td class="text-center fw-bold"><?php echo $total_demandados; ?></td>
+                        <td class="text-center fw-bold"><?php echo $total_entregados; ?></td>
+                        <td class="text-center fw-bold"><?php echo $total_realizados; ?></td>
+                        <td class="text-center fw-bold <?php echo $total_pendientes > 0 ? 'text-danger' : 'text-success'; ?>">
+                            <?php echo $total_pendientes; ?>
+                        </td>
+                        <td></td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<!-- Modal Actualizar Cantidad Realizada -->
+<div class="modal fade" id="modalActualizarRealizado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-industry me-2"></i>
+                    Actualizar Cantidad Realizada
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="actualizar_cantidad_realizada">
+                    <input type="hidden" name="producto_id" id="actualizar_producto_id">
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span>Actualizando cantidad realizada para: <strong id="actualizar_producto_nombre"></strong></span>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Cantidad demandada:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light" id="actualizar_cantidad_total"></span>
+                                <span class="input-group-text"><i class="fas fa-box"></i></span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Cantidad pendiente:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light" id="actualizar_cantidad_pendiente"></span>
+                                <span class="input-group-text"><i class="fas fa-hourglass-half"></i></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cantidad_realizada" class="form-label fw-bold">
+                            <i class="fas fa-check-circle me-2"></i>Nueva cantidad realizada:
+                        </label>
+                        <input type="number" class="form-control form-control-lg" id="cantidad_realizada" name="cantidad_realizada" min="0" step="0.001" required>
+                        <div class="form-text">
+                            Indique el número total de unidades que ha realizado hasta ahora.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Producto -->
+<div class="modal fade" id="modalAgregarProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Agregar Nuevo Producto
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="agregar_producto">
+
+                    <div class="mb-3">
+                        <label for="nombre_producto" class="form-label">
+                            <i class="fas fa-tag me-2"></i>Nombre del Producto
+                        </label>
+                        <input type="text" class="form-control" id="nombre_producto" name="nombre_producto" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcion_producto" class="form-label">
+                            <i class="fas fa-info-circle me-2"></i>Descripción (Opcional)
+                        </label>
+                        <textarea class="form-control" id="descripcion_producto" name="descripcion_producto" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="precio_producto" class="form-label">
+                            <i class="fas fa-euro-sign me-2"></i>Precio
+                        </label>
+                        <input type="number" class="form-control" id="precio_producto" name="precio_producto" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Guardar Producto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Producto -->
+<div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Producto
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="editar_producto">
+                    <input type="hidden" name="id_producto" id="editar_id_producto">
+
+                    <div class="mb-3">
+                        <label for="editar_nombre_producto" class="form-label">
+                            <i class="fas fa-tag me-2"></i>Nombre del Producto
+                        </label>
+                        <input type="text" class="form-control" id="editar_nombre_producto" name="nombre_producto" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editar_descripcion_producto" class="form-label">
+                            <i class="fas fa-info-circle me-2"></i>Descripción (Opcional)
+                        </label>
+                        <textarea class="form-control" id="editar_descripcion_producto" name="descripcion_producto" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editar_precio_producto" class="form-label">
+                            <i class="fas fa-euro-sign me-2"></i>Precio
+                        </label>
+                        <input type="number" class="form-control" id="editar_precio_producto" name="precio_producto" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Actualizar Producto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Cliente -->
+<div class="modal fade" id="modalEditarCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-edit me-2"></i>
+                    Editar Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="editar_cliente">
+                    <input type="hidden" name="cliente_id" id="editar_cliente_id">
+
+                    <div class="mb-3">
+                        <label for="editar_nombre" class="form-label">
+                            <i class="fas fa-user me-2"></i>Nombre
+                        </label>
+                        <input type="text" class="form-control" id="editar_nombre" name="nombre" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editar_telefono" class="form-label">
+                            <i class="fas fa-phone me-2"></i>Teléfono
+                        </label>
+                        <input type="text" class="form-control" id="editar_telefono" name="telefono">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editar_email" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>Email
+                        </label>
+                        <input type="email" class="form-control" id="editar_email" name="email">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editar_producto_favorito" class="form-label">
+                            <i class="fas fa-star me-2"></i>Producto Favorito
+                        </label>
+                        <select class="form-select" id="editar_producto_favorito" name="producto_favorito_id">
+                            <option value="">-- Seleccionar producto favorito --</option>
+                            <?php
+                            $productos = obtenerProductos($pdo);
+                            foreach ($productos as $producto):
+                            ?>
+                                <option value="<?php echo $producto['id']; ?>">
+                                    <?php echo htmlspecialchars($producto['nombre']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Actualizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal Eliminar Cliente -->
+<div class="modal fade" id="modalEliminarCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-times me-2"></i>
+                    Eliminar Cliente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="eliminar_cliente">
+                    <input type="hidden" name="cliente_id" id="eliminar_cliente_id">
+
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ¿Está seguro de que desea eliminar al cliente <strong id="eliminar_cliente_nombre"></strong>?
+                    </div>
+
+                    <p class="text-danger">
+                        <small>Esta acción no se puede deshacer. Solo es posible eliminar clientes que no tengan pedidos asociados.</small>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-2"></i>Eliminar Cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Pedido -->
+<div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Pedido #<span id="editar_pedido_numero"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="editar_pedido">
+                    <input type="hidden" name="pedido_id" id="editar_pedido_id">
+                    <input type="hidden" name="cliente_id" value="<?php echo $cliente_id; ?>">
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Importante:</strong> No podrá reducir la cantidad de un producto por debajo de la cantidad ya entregada.
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Cantidad Solicitada</th>
+                                    <th>Cantidad Entregada</th>
+                                    <th>Nueva Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody id="editar_pedido_productos">
+                                <!-- La tabla se llenará dinámicamente con JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Producto -->
+<div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash-alt me-2"></i>
+                    Eliminar Producto
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="eliminar_producto">
+                    <input type="hidden" name="id_producto" id="eliminar_id_producto">
+
+                    <p>
+                        <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                        ¿Está seguro de que desea eliminar el producto <strong id="eliminar_nombre_producto"></strong>?
+                    </p>
+                    <p class="text-danger">
+                        <small>Esta acción no se puede deshacer. Solo puede eliminar productos que no estén asociados a ningún pedido.</small>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-2"></i>Eliminar Producto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Productos para Cliente Seleccionado -->
+<div class="modal fade" id="modalAgregarProductos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cart-plus me-2"></i>
+                    Añadir Productos para <span id="cliente-nombre-seleccionado"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="crear_pedido">
+                    <input type="hidden" name="cliente_id" id="cliente-id-seleccionado">
+
+                    <h6 class="mb-3">
+                        <i class="fas fa-boxes me-2"></i>
+                        Selecciona los productos y cantidades:
+                    </h6>
+
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $productos = obtenerProductos($pdo);
+                                foreach ($productos as $producto):
+                                ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($producto['nombre']); ?></td>
+                                        <td><?php echo number_format($producto['precio'], 2); ?> €</td>
+                                        <td>
+                                            <input type="number" class="form-control producto-cantidad" name="cantidad_<?php echo $producto['id']; ?>" min="0" value="0">
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Crear Pedido con Productos
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Pedido -->
+<div class="modal fade" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cart-plus me-2"></i>
+                    Crear Nuevo Pedido
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="accion" value="crear_pedido">
+                    <input type="hidden" name="cliente_id" value="<?php echo $cliente_id; ?>">
+
+                    <h6 class="mb-3">
+                        <i class="fas fa-boxes me-2"></i>
+                        Selecciona los productos y cantidades:
+                    </h6>
+
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $productos = obtenerProductos($pdo);
+                                foreach ($productos as $producto):
+                                ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($producto['nombre']); ?></td>
+                                        <td><?php echo number_format($producto['precio'], 2); ?> €</td>
+                                        <td>
+                                            <input type="number" class="form-control producto-cantidad" name="cantidad_<?php echo $producto['id']; ?>" min="0" value="0" step="0.001">
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Guardar Pedido
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- REEMPLAZAR COMPLETAMENTE EL MODAL DE ENTREGA PARCIAL ACTUAL CON ESTE CÓDIGO -->
+<!-- Este código debe ir en la parte inferior de vista.php, donde están todos los modales -->
+
+<!-- Modal Entrega Parcial -->
+<!-- Modal Entrega Parcial -->
+<div class="modal fade" id="modalEntregaParcial" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-truck me-2"></i>
+                    Registrar Entrega
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <input type="hidden" name="accion" value="registrar_entrega_parcial">
+                <input type="hidden" name="detalle_pedido_id" id="entrega_parcial_detalle_id">
+                <input type="hidden" name="cliente_id" id="entrega_parcial_cliente_id">
+                <input type="hidden" name="pedido_id" id="entrega_parcial_pedido_id">
+                <input type="hidden" name="volver_clientes" id="entrega_parcial_volver_clientes" value="0">
+
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Registrando entrega para: <strong id="entrega_parcial_producto"></strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cantidad_entrega" class="form-label">
+                            <i class="fas fa-box me-2"></i>Cantidad a entregar
+                        </label>
+                        <input type="number" class="form-control" id="cantidad_entrega" name="cantidad"
+                            min="0.001" max="" step="0.001" required>
+                        <small class="text-muted">Unidades disponibles para entregar: <span id="cantidad_disponible"></span></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notas_entrega" class="form-label">
+                            <i class="fas fa-comment me-2"></i>Notas o comentarios (opcional)
+                        </label>
+                        <textarea class="form-control" id="notas_entrega" name="notas"
+                            placeholder="Añade cualquier comentario relevante sobre esta entrega"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Registrar Entrega
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Corregir Entrega -->
+<div class="modal fade" id="modalCorregirEntrega" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Corregir Entrega
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <input type="hidden" name="accion" value="corregir_entrega_parcial">
+                <input type="hidden" name="detalle_pedido_id" id="corregir_entrega_detalle_id">
+                <input type="hidden" name="cliente_id" value="<?php echo $cliente_id; ?>">
+                <input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>">
+
+                <div class="modal-body">
+                    <p>
+                        <strong>Producto:</strong>
+                        <span id="corregir_entrega_producto"></span>
+                    </p>
+                    <div class="mb-3">
+                        <label for="nueva_cantidad_entrega" class="form-label">
+                            <i class="fas fa-box me-2"></i>Nueva Cantidad Entregada
+                        </label>
+                        <input type="number" class="form-control" id="nueva_cantidad_entrega" name="nueva_cantidad"
+                            min="0" max="" step="0.001" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notas_correccion" class="form-label">
+                            <i class="fas fa-notes-medical me-2"></i>Notas (opcional)
+                        </label>
+                        <textarea class="form-control" id="notas_correccion" name="notas"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Corregir Entrega
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Marcar Producto Entregado -->
+<div class="modal fade" id="modalMarcarEntregado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Marcar Producto como Entregado
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post">
+                <input type="hidden" name="accion" value="marcar_producto_entregado">
+                <input type="hidden" name="detalle_pedido_id" id="marcar_entregado_detalle_id">
+                <input type="hidden" name="cliente_id" value="<?php echo $cliente_id; ?>">
+                <input type="hidden" name="pedido_id" value="<?php echo $pedido_id; ?>">
+
+                <div class="modal-body">
+                    <p>
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        ¿Está seguro de que desea marcar
+                        <strong id="marcar_entregado_producto"></strong>
+                        como completamente entregado?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Marcar Completado
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalEntregaParcial = document.getElementById('modalEntregaParcial');
+        if (modalEntregaParcial) {
+            modalEntregaParcial.addEventListener('show.bs.modal', function(event) {
+                // Obtener el botón que activó el modal
+                const button = event.relatedTarget;
+
+                // Extraer información del botón
+                const detalleId = button.getAttribute('data-detalle-id');
+                const producto = button.getAttribute('data-producto');
+                const cantidadPedida = parseFloat(button.getAttribute('data-cantidad-pedida')) || 0;
+                const cantidadEntregada = parseFloat(button.getAttribute('data-cantidad-entregada')) || 0;
+                const clienteId = button.getAttribute('data-cliente-id');
+                const pedidoId = button.getAttribute('data-pedido-id');
+
+                // Calcular cantidad disponible para entregar
+                const cantidadDisponible = (cantidadPedida - cantidadEntregada).toFixed(3);
+
+                // Actualizar elementos del modal
+                document.getElementById('entrega_parcial_detalle_id').value = detalleId;
+                document.getElementById('entrega_parcial_producto').textContent = producto;
+                document.getElementById('entrega_parcial_cliente_id').value = clienteId;
+                document.getElementById('entrega_parcial_pedido_id').value = pedidoId;
+
+                // Configurar campo de cantidad - dejarlo vacío y establecer el valor máximo
+                const inputCantidad = document.getElementById('cantidad_entrega');
+                inputCantidad.max = cantidadDisponible;
+                inputCantidad.min = 0.001; // Para permitir decimales pequeños
+                inputCantidad.value = ''; // Dejamos el campo vacío
+
+                // Mostrar cantidad disponible
+                document.getElementById('cantidad_disponible').textContent = cantidadDisponible;
+
+                // Limpiar el campo de notas
+                document.getElementById('notas_entrega').value = '';
+
+                // Determinar si estamos en la vista de clientes o en la vista de pedidos
+                // Si NO hay un parámetro pedido_id en la URL, estamos en la vista de clientes
+                const urlParams = new URLSearchParams(window.location.search);
+                const enVistaClientes = !urlParams.has('pedido_id');
+
+                // Configurar el campo oculto según la vista actual
+                document.getElementById('entrega_parcial_volver_clientes').value = enVistaClientes ? '1' : '0';
+            });
+        }
+
+        // Modal de corrección de entrega
+        const modalCorregirEntrega = document.getElementById('modalCorregirEntrega');
+        if (modalCorregirEntrega) {
+            modalCorregirEntrega.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const detalleId = button.getAttribute('data-detalle-id');
+                const producto = button.getAttribute('data-producto');
+                const cantidadEntregada = parseFloat(button.getAttribute('data-cantidad-entregada'));
+
+                document.getElementById('corregir_entrega_detalle_id').value = detalleId;
+                document.getElementById('corregir_entrega_producto').textContent = producto;
+
+                const inputCantidad = document.getElementById('nueva_cantidad_entrega');
+                inputCantidad.value = cantidadEntregada;
+            });
+        }
+
+        // Modal de marcar producto como entregado
+        const modalMarcarEntregado = document.getElementById('modalMarcarEntregado');
+        if (modalMarcarEntregado) {
+            modalMarcarEntregado.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const detalleId = button.getAttribute('data-detalle-id');
+                const producto = button.getAttribute('data-producto');
+
+                document.getElementById('marcar_entregado_detalle_id').value = detalleId;
+                document.getElementById('marcar_entregado_producto').textContent = producto;
+            });
+        }
+
+        // Modal Añadir Productos para Cliente
+        const modalAgregarProductos = document.getElementById('modalAgregarProductos');
+        if (modalAgregarProductos) {
+            modalAgregarProductos.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const clienteId = button.getAttribute('data-cliente-id');
+                const clienteNombre = button.getAttribute('data-cliente-nombre');
+
+                document.getElementById('cliente-id-seleccionado').value = clienteId;
+                document.getElementById('cliente-nombre-seleccionado').textContent = clienteNombre;
+            });
+        }
+
+        // Modal Editar Producto
+        const modalEditarProducto = document.getElementById('modalEditarProducto');
+        if (modalEditarProducto) {
+            modalEditarProducto.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const id = button.getAttribute('data-id');
+                const nombre = button.getAttribute('data-nombre');
+                const descripcion = button.getAttribute('data-descripcion');
+                const precio = button.getAttribute('data-precio');
+
+                document.getElementById('editar_id_producto').value = id;
+                document.getElementById('editar_nombre_producto').value = nombre;
+                document.getElementById('editar_descripcion_producto').value = descripcion;
+                document.getElementById('editar_precio_producto').value = precio;
+            });
+        }
+
+        // Modal Eliminar Producto
+        const modalEliminarProducto = document.getElementById('modalEliminarProducto');
+        if (modalEliminarProducto) {
+            modalEliminarProducto.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const id = button.getAttribute('data-id');
+                const nombre = button.getAttribute('data-nombre');
+
+                document.getElementById('eliminar_id_producto').value = id;
+                document.getElementById('eliminar_nombre_producto').textContent = nombre;
+            });
+        }
+
+
+        const modalEliminarCliente = document.getElementById('modalEliminarCliente');
+        if (modalEliminarCliente) {
+            modalEliminarCliente.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const clienteId = button.getAttribute('data-id');
+                const clienteNombre = button.getAttribute('data-nombre');
+
+                document.getElementById('eliminar_cliente_id').value = clienteId;
+                document.getElementById('eliminar_cliente_nombre').textContent = clienteNombre;
+            });
+        }
+
+        // Modal Editar Pedido
+        const modalEditarPedido = document.getElementById('modalEditarPedido');
+        if (modalEditarPedido) {
+            modalEditarPedido.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const pedidoId = button.getAttribute('data-pedido-id');
+
+                document.getElementById('editar_pedido_id').value = pedidoId;
+                document.getElementById('editar_pedido_numero').textContent = pedidoId;
+
+                // Cargar los detalles del pedido mediante AJAX
+                fetch(`index.php?ajax=get_pedido_detalles&pedido_id=${pedidoId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert('Error al cargar los detalles del pedido: ' + data.error);
+                            return;
+                        }
+
+                        // Obtener todos los productos disponibles
+                        fetch('index.php?ajax=get_productos')
+                            .then(response => response.json())
+                            .then(productosData => {
+                                const productos = productosData.productos;
+                                const detalles = data.detalles;
+                                const tbodyElement = document.getElementById('editar_pedido_productos');
+
+                                // Limpiar el contenido actual
+                                tbodyElement.innerHTML = '';
+
+                                // Para cada producto, crear una fila
+                                productos.forEach(producto => {
+                                    // Buscar si este producto está en el pedido
+                                    const detalle = detalles.find(d => d.producto_id == producto.id);
+                                    // Usar parseFloat en lugar de parseInt para permitir decimales
+                                    const cantidadSolicitada = detalle ? parseFloat(detalle.cantidad) : 0;
+                                    const cantidadEntregada = detalle ? parseFloat(detalle.cantidad_entregada) : 0;
+
+                                    // Crear la fila
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = `
+                                <td>${producto.nombre}</td>
+                                <td>${parseFloat(producto.precio).toFixed(2)} €</td>
+                                <td>${cantidadSolicitada}</td>
+                                <td>${cantidadEntregada}</td>
+                                <td>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           name="cantidad_${producto.id}" 
+                                           value="${cantidadSolicitada}"
+                                           min="${cantidadEntregada}" 
+                                           step="0.001"
+                                           ${detalle && cantidadEntregada > 0 ? 'data-tiene-entregas="true"' : ''}
+                                           required>
+                                </td>
+                            `;
+
+                                    tbodyElement.appendChild(row);
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Error al cargar productos:', error);
+                                alert('Error al cargar la lista de productos. Por favor, inténtelo de nuevo.');
+                            });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error al cargar los detalles del pedido. Por favor, inténtelo de nuevo.');
+                    });
+            });
+        }
+        const modalActualizarRealizado = document.getElementById('modalActualizarRealizado');
+
+        if (modalActualizarRealizado) {
+            modalActualizarRealizado.addEventListener('show.bs.modal', function(event) {
+                // Obtener el botón que activó el modal
+                const button = event.relatedTarget;
+
+                // Extraer información del botón
+                const productoId = button.getAttribute('data-producto-id');
+                const productoNombre = button.getAttribute('data-producto-nombre');
+                const cantidadTotal = parseInt(button.getAttribute('data-cantidad-total')) || 0;
+                const cantidadRealizada = parseInt(button.getAttribute('data-cantidad-realizada')) || 0;
+
+                // Calcular cantidad pendiente
+                const cantidadPendiente = Math.max(0, cantidadTotal - cantidadRealizada);
+
+                // Actualizar elementos del modal
+                document.getElementById('actualizar_producto_id').value = productoId;
+                document.getElementById('actualizar_producto_nombre').textContent = productoNombre;
+                document.getElementById('actualizar_cantidad_total').textContent = cantidadTotal;
+                document.getElementById('actualizar_cantidad_pendiente').textContent = cantidadPendiente;
+
+                // Establece el valor actual en el campo
+                document.getElementById('cantidad_realizada').value = cantidadRealizada;
+            });
+        }
+
+        // Modal Editar Cliente
+        const modalEditarCliente = document.getElementById('modalEditarCliente');
+        if (modalEditarCliente) {
+            modalEditarCliente.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const clienteId = button.getAttribute('data-id');
+                const clienteNombre = button.getAttribute('data-nombre');
+                const clienteTelefono = button.getAttribute('data-telefono');
+                const clienteEmail = button.getAttribute('data-email');
+                const productoFavoritoId = button.getAttribute('data-producto-favorito-id');
+
+                document.getElementById('editar_cliente_id').value = clienteId;
+                document.getElementById('editar_nombre').value = clienteNombre;
+                document.getElementById('editar_telefono').value = clienteTelefono;
+                document.getElementById('editar_email').value = clienteEmail;
+
+                // Seleccionar el producto favorito
+                const selectProducto = document.getElementById('editar_producto_favorito');
+                if (productoFavoritoId) {
+                    for (let i = 0; i < selectProducto.options.length; i++) {
+                        if (selectProducto.options[i].value === productoFavoritoId) {
+                            selectProducto.options[i].selected = true;
+                            break;
+                        }
+                    }
+                } else {
+                    selectProducto.options[0].selected = true;
+                }
+            });
+        }
+    });
+</script>
+</body>
+
+</html>
