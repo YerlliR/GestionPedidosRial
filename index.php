@@ -12,7 +12,10 @@ require_once 'pedidos_funciones.php';
 require_once 'entregas_funciones.php';
 require_once 'facturas_funciones.php';
 require_once 'resumen_productos_funciones.php';
+require_once 'productos_favoritos_funciones.php'; // Nuevo archivo
 
+
+crearTablaProductosFavoritos($pdo);
 
 // Handle invoice download
 if (isset($_GET['descargar_factura']) && isset($_GET['pedido_id'])) {
@@ -57,6 +60,13 @@ if (isset($_GET['ajax'])) {
     }else if ($_GET['ajax'] == 'get_productos') {
         $productos = obtenerProductos($pdo);
         echo json_encode(['productos' => $productos]);
+        exit;
+    }    elseif ($_GET['ajax'] == 'toggle_favorito') {
+        $producto_id = (int)$_GET['producto_id'];
+        $es_favorito = (bool)$_GET['es_favorito'];
+        
+        $resultado = actualizarProductoFavorito($pdo, $producto_id, $es_favorito);
+        echo json_encode(['success' => $resultado]);
         exit;
     }
 }
@@ -216,6 +226,22 @@ elseif ($accion == 'agregar_cliente') {
         header("Location: index.php?error=error_eliminar_cliente&mensaje=" . $mensaje_codificado);
     }
     exit;
+}elseif ($accion == 'toggle_producto_favorito') {
+    $producto_id = (int)$_POST['producto_id'];
+    $es_favorito = (bool)$_POST['es_favorito'];
+    
+    $resultado = actualizarProductoFavorito($pdo, $producto_id, $es_favorito);
+    
+    // Si es una petición AJAX, devolver JSON
+    if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => $resultado]);
+        exit;
+    }
+    
+    // Si no es AJAX, redirigir
+    header("Location: index.php");
+    exit;
 }
 
 // Sección para manejar productos
@@ -276,7 +302,8 @@ if (isset($_GET['error'])) {
 }
 
 // Get context
-$clientes = obtenerClientes($pdo);
+
+$mostrar_solo_favoritos = isset($_GET['mostrar_solo_favoritos']) ? ($_GET['mostrar_solo_favoritos'] !== '0') : true;$clientes = obtenerClientes($pdo);
 $cliente_id = isset($_GET['cliente_id']) ? $_GET['cliente_id'] : null;
 $ver_todos = isset($_GET['ver_todos']) && $_GET['ver_todos'] == '1';
 $pedido_id = isset($_GET['pedido_id']) ? $_GET['pedido_id'] : null;

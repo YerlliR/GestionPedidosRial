@@ -20,6 +20,35 @@ function formatearCantidad($cantidad) {
         return number_format($cantidad, 3);
     }
 }
+
+// AÑADIR AQUÍ EL CÓDIGO DE INICIALIZACIÓN
+if (!isset($cliente)) {
+    $cliente = [
+        'id' => '',
+        'nombre' => '',
+        'telefono' => '',
+        'email' => '',
+        'producto_favorito_id' => null,
+        'producto_favorito_nombre' => ''
+    ];
+}
+
+if (!isset($info_producto)) {
+    $info_producto = [
+        'cantidad_solicitada' => 0,
+        'cantidad_entregada' => 0
+    ];
+}
+
+// También asegúrate de que $iniciales está definido antes de usarlo
+if (!isset($iniciales) && isset($cliente['nombre'])) {
+    // Generar iniciales a partir del nombre del cliente
+    $iniciales = strtoupper(substr($cliente['nombre'], 0, 1));
+    if (strpos($cliente['nombre'], ' ') !== false) {
+        $partes = explode(' ', $cliente['nombre']);
+        $iniciales = strtoupper(substr($partes[0], 0, 1) . substr(end($partes), 0, 1));
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -34,35 +63,70 @@ function formatearCantidad($cantidad) {
 </head>
 
 <body>
-    <!-- Navbar Mejorado a agregar al inicio de vista.php, justo después de la etiqueta <body> -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center w-100">
-                <a href="index.php" class="navbar-brand">
-                    <i class="fas fa-boxes me-2"></i>
-                    Sistema de Gestión de Pedidos
+
+<nav class="navbar">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <a href="index.php" class="navbar-brand">
+                <i class="fas fa-boxes me-2"></i>
+                Gestión de Pedidos
+            </a>
+
+            <button class="menu-toggle d-md-none" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="d-none d-md-flex align-items-center gap-3">
+                <a href="index.php" class="nav-link <?php echo !$mostrar_productos && !$cliente_id ? 'active' : ''; ?>">
+                    <i class="fas fa-users me-1"></i>
+                    <span class="d-none d-md-inline">Clientes</span>
                 </a>
 
-                <div class="d-flex align-items-center gap-3">
-                    <a href="index.php" class="nav-link <?php echo !$mostrar_productos && !$cliente_id ? 'active' : ''; ?>">
-                        <i class="fas fa-users me-1"></i>
-                        <span class="d-none d-md-inline">Clientes</span>
-                    </a>
+                <a href="?productos=1" class="nav-link <?php echo $mostrar_productos ? 'active' : ''; ?>">
+                    <i class="fas fa-box me-1"></i>
+                    <span class="d-none d-md-inline">Productos</span>
+                </a>
 
-                    <a href="?productos=1" class="nav-link <?php echo $mostrar_productos ? 'active' : ''; ?>">
-                        <i class="fas fa-box me-1"></i>
-                        <span class="d-none d-md-inline">Productos</span>
+                <?php if ($cliente_id): ?>
+                    <a href="index.php?cliente_id=<?php echo $cliente_id; ?>" class="nav-link active">
+                        <i class="fas fa-shopping-cart me-1"></i>
+                        <span class="d-none d-md-inline">Pedidos</span>
                     </a>
-
-                    <?php if ($cliente_id): ?>
-                        <a href="index.php?cliente_id=<?php echo $cliente_id; ?>" class="nav-link active">
-                            <i class="fas fa-shopping-cart me-1"></i>
-                            <span class="d-none d-md-inline">Pedidos</span>
-                        </a>
-                    <?php endif; ?>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
+    </div>
+    
+    <!-- Menú móvil -->
+    <div class="navbar-backdrop" id="menuBackdrop"></div>
+    <div class="navbar-menu" id="mobileMenu">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="m-0">Menú</h5>
+            <button class="btn-close" id="menuClose"></button>
+        </div>
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <a href="index.php" class="nav-link <?php echo !$mostrar_productos && !$cliente_id ? 'active' : ''; ?>">
+                    <i class="fas fa-users me-2"></i>
+                    Clientes
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a href="?productos=1" class="nav-link <?php echo $mostrar_productos ? 'active' : ''; ?>">
+                    <i class="fas fa-box me-2"></i>
+                    Productos
+                </a>
+            </li>
+            <?php if ($cliente_id): ?>
+                <li class="nav-item mb-2">
+                    <a href="index.php?cliente_id=<?php echo $cliente_id; ?>" class="nav-link active">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Pedidos de <?php echo htmlspecialchars(substr($cliente_actual['nombre'], 0, 15) . (strlen($cliente_actual['nombre']) > 15 ? '...' : '')); ?>
+                    </a>
+                </li>
+            <?php endif; ?>
+        </ul>
+    </div>
     </nav>
     
 
@@ -138,12 +202,16 @@ function formatearCantidad($cantidad) {
 
         <?php if (!$cliente_id && !$mostrar_productos): ?>
             <div class="dashboard animate-fade-in">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">Clientes y sus Productos Favoritos</h2>
-                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAgregarCliente">
-                        <i class="fas fa-user-plus me-2"></i>Agregar Cliente
-                    </button>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Clientes y sus Productos Favoritos</h2>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAgregarCliente">
+                    <i class="fas fa-user-plus me-2"></i>Agregar Cliente
+                </button>
+            </div>
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="buscadorClientes" class="form-control" placeholder="Buscar clientes por nombre, teléfono o email...">
+            </div>
 
                 <div class="row">
                     <?php foreach ($clientes as $cliente):
@@ -180,140 +248,145 @@ function formatearCantidad($cantidad) {
                             $iniciales = strtoupper(substr($partes[0], 0, 1) . substr(end($partes), 0, 1));
                         }
                     ?>
-                        <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="cliente-card animate-fade-in">
-                                <!-- Botones de acción en la esquina superior derecha -->
-                                <div class="cliente-acciones">
-                                    <button class="btn btn-warning btn-sm btn-cliente-accion"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modalEditarCliente"
-                                        data-id="<?php echo $cliente['id']; ?>"
-                                        data-nombre="<?php echo htmlspecialchars($cliente['nombre']); ?>"
-                                        data-telefono="<?php echo htmlspecialchars($cliente['telefono']); ?>"
-                                        data-email="<?php echo htmlspecialchars($cliente['email']); ?>"
-                                        data-producto-favorito-id="<?php echo $cliente['producto_favorito_id']; ?>">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm btn-cliente-accion"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modalEliminarCliente"
-                                        data-id="<?php echo $cliente['id']; ?>"
-                                        data-nombre="<?php echo htmlspecialchars($cliente['nombre']); ?>">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="cliente-card animate-fade-in">
+                            <!-- Botones de acción en la esquina superior derecha -->
+                            <div class="cliente-acciones">
+                                <button class="btn btn-warning btn-sm btn-cliente-accion"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEditarCliente"
+                                    data-id="<?php echo $cliente['id']; ?>"
+                                    data-nombre="<?php echo htmlspecialchars($cliente['nombre'] ?? ''); ?>"
+                                    data-telefono="<?php echo htmlspecialchars($cliente['telefono']); ?>"
+                                    data-email="<?php echo htmlspecialchars($cliente['email']); ?>"
+                                    data-producto-favorito-id="<?php echo $cliente['producto_favorito_id']; ?>"
+                                    data-tooltip="Editar cliente">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm btn-cliente-accion"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalEliminarCliente"
+                                    data-id="<?php echo $cliente['id']; ?>"
+                                    data-nombre="<?php echo htmlspecialchars($cliente['nombre'] ?? '');?>"
+                                    data-tooltip="Eliminar cliente">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+
+                            <!-- Información principal del cliente -->
+                            <div class="cliente-info">
+                                <div class="cliente-avatar">
+                                    <?php echo $iniciales; ?>
                                 </div>
+                                <div class="cliente-details">
+                                    <h3 class="cliente-name"><?php echo htmlspecialchars($cliente['nombre'] ?? ''); ?></h3>
 
-                                <!-- Información principal del cliente -->
-                                <div class="cliente-info">
-                                    <div class="cliente-avatar">
-                                        <?php echo $iniciales; ?>
-                                    </div>
-                                    <div class="cliente-details">
-                                        <h3 class="cliente-name"><?php echo htmlspecialchars($cliente['nombre']); ?></h3>
-
-                                        <?php if (!empty($cliente['telefono'])): ?>
-                                            <div class="cliente-contact">
-                                                <i class="fas fa-phone text-muted"></i>
-                                                <?php echo htmlspecialchars($cliente['telefono']); ?>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if (!empty($cliente['email'])): ?>
-                                            <div class="cliente-contact">
-                                                <i class="fas fa-envelope text-muted"></i>
-                                                <?php echo htmlspecialchars($cliente['email']); ?>
-                                            </div>
-                                        <?php endif; ?>
-
-                                        <?php if (!empty($cliente['producto_favorito_nombre'])): ?>
-                                            <div class="mt-2">
-                                                <span class="badge bg-primary">
-                                                    <i class="fas fa-star me-1"></i>
-                                                    <?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>
-                                                </span>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-
-                                <!-- Barra de progreso para producto favorito (si existe) -->
-                                <?php if ($info_producto['cantidad_solicitada'] > 0): ?>
-                                    <div class="mt-3">
-                                        <div class="progress-label">
-                                            <span>Entrega de producto favorito</span>
-                                            <span><?php echo formatearCantidad($info_producto['cantidad_entregada']); ?> / <?php echo formatearCantidad($info_producto['cantidad_solicitada']); ?></span>
+                                    <?php if (!empty($cliente['telefono'])): ?>
+                                        <div class="cliente-contact">
+                                            <i class="fas fa-phone text-muted"></i>
+                                            <?php echo htmlspecialchars($cliente['telefono']); ?>
                                         </div>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-info" role="progressbar"
-                                                style="width: <?php echo $porcentaje_entrega; ?>%"
-                                                aria-valuenow="<?php echo $porcentaje_entrega; ?>"
-                                                aria-valuemin="0"
-                                                aria-valuemax="100"></div>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($cliente['email'])): ?>
+                                        <div class="cliente-contact">
+                                            <i class="fas fa-envelope text-muted"></i>
+                                            <?php echo htmlspecialchars($cliente['email']); ?>
                                         </div>
-                                        <div class="d-flex justify-content-between align-items-center mt-2">
-                                            <span class="badge <?php echo $estado_clase; ?>"><?php echo $estado_texto; ?></span>
-                                            <span class="text-muted small">Actualizado: <?php echo date('d/m/Y'); ?></span>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($cliente['producto_favorito_nombre'])): ?>
+                                        <div class="mt-2">
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-star me-1"></i>
+                                                <?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>
+                                            </span>
                                         </div>
-                                    </div>
-                                <?php endif; ?>
-
-                                <!-- Botones de acción principales -->
-                                <div class="d-flex justify-content-between mt-3">
-                                    <a href="?cliente_id=<?php echo $cliente['id']; ?>" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-shopping-cart me-1"></i>Ver Pedidos
-                                    </a>
-
-                                    <?php if (!empty($cliente['producto_favorito_id'])): ?>
-                                        <?php
-                                        // Obtener el último pedido activo que contenga el producto favorito
-                                        $stmt = $pdo->prepare("
-                        SELECT dp.id as detalle_id, ped.id as pedido_id, dp.cantidad, dp.cantidad_entregada
-                        FROM detalles_pedido dp
-                        JOIN pedidos ped ON dp.pedido_id = ped.id
-                        WHERE ped.cliente_id = ? 
-                        AND dp.producto_id = ? 
-                        AND dp.entregado = 0
-                        ORDER BY ped.fecha_creacion DESC
-                        LIMIT 1
-                    ");
-                                        $stmt->execute([$cliente['id'], $cliente['producto_favorito_id']]);
-                                        $ultimo_pedido_favorito = $stmt->fetch(PDO::FETCH_ASSOC);
-                                        ?>
-
-                                        <?php if ($ultimo_pedido_favorito): ?>
-                                            <button type="button" class="btn btn-success btn-sm"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#modalEntregaParcial"
-                                                data-detalle-id="<?php echo $ultimo_pedido_favorito['detalle_id']; ?>"
-                                                data-producto="<?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>"
-                                                data-cantidad-pedida="<?php echo $ultimo_pedido_favorito['cantidad']; ?>"
-                                                data-cantidad-entregada="<?php echo $ultimo_pedido_favorito['cantidad_entregada']; ?>"
-                                                data-cliente-id="<?php echo $cliente['id']; ?>"
-                                                data-pedido-id="<?php echo $ultimo_pedido_favorito['pedido_id']; ?>">
-                                                <i class="fas fa-truck me-1"></i>
-                                                Entregar <?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>
-                                            </button>
-                                        <?php else: ?>
-                                            <button class="btn btn-secondary btn-sm" disabled>
-                                                <i class="fas fa-truck me-1"></i>
-                                                Sin pedido activo
-                                            </button>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <button class="btn btn-outline-primary btn-sm"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalEditarCliente"
-                                            data-id="<?php echo $cliente['id']; ?>"
-                                            data-nombre="<?php echo htmlspecialchars($cliente['nombre']); ?>"
-                                            data-telefono="<?php echo htmlspecialchars($cliente['telefono']); ?>"
-                                            data-email="<?php echo htmlspecialchars($cliente['email']); ?>">
-                                            <i class="fas fa-star me-1"></i>
-                                            Definir favorito
-                                        </button>
                                     <?php endif; ?>
                                 </div>
                             </div>
+
+                            <!-- Barra de progreso para producto favorito (si existe) -->
+                            <?php if ($info_producto['cantidad_solicitada'] > 0): ?>
+                                <div class="mt-3">
+                                    <div class="progress-label">
+                                        <span>Entrega de producto favorito</span>
+                                        <span><?php echo formatearCantidad($info_producto['cantidad_entregada']); ?> / <?php echo formatearCantidad($info_producto['cantidad_solicitada']); ?></span>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-info" role="progressbar"
+                                            style="width: <?php echo $porcentaje_entrega; ?>%"
+                                            aria-valuenow="<?php echo $porcentaje_entrega; ?>"
+                                            aria-valuemin="0"
+                                            aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <span class="badge <?php echo $estado_clase; ?>"><?php echo $estado_texto; ?></span>
+                                        <span class="text-muted small">Actualizado: <?php echo date('d/m/Y'); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Botones de acción principales -->
+                            <div class="d-flex justify-content-between mt-3">
+                                <!-- Este enlace será usado para hacer toda la tarjeta clickable con JavaScript -->
+                                <a href="?cliente_id=<?php echo $cliente['id']; ?>" class="btn btn-primary btn-sm btn-ver-pedidos">
+                                    <i class="fas fa-shopping-cart me-1"></i>Ver Pedidos
+                                </a>
+
+                                <?php if (!empty($cliente['producto_favorito_id'])): ?>
+                                    <?php
+                                    // Obtener el último pedido activo que contenga el producto favorito
+                                    $stmt = $pdo->prepare("
+                    SELECT dp.id as detalle_id, ped.id as pedido_id, dp.cantidad, dp.cantidad_entregada
+                    FROM detalles_pedido dp
+                    JOIN pedidos ped ON dp.pedido_id = ped.id
+                    WHERE ped.cliente_id = ? 
+                    AND dp.producto_id = ? 
+                    AND dp.entregado = 0
+                    ORDER BY ped.fecha_creacion DESC
+                    LIMIT 1
+                    ");
+                                    $stmt->execute([$cliente['id'], $cliente['producto_favorito_id']]);
+                                    $ultimo_pedido_favorito = $stmt->fetch(PDO::FETCH_ASSOC);
+                                    ?>
+
+                                    <?php if ($ultimo_pedido_favorito): ?>
+                                        <button type="button" class="btn btn-success btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEntregaParcial"
+                                            data-detalle-id="<?php echo $ultimo_pedido_favorito['detalle_id']; ?>"
+                                            data-producto="<?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>"
+                                            data-cantidad-pedida="<?php echo $ultimo_pedido_favorito['cantidad']; ?>"
+                                            data-cantidad-entregada="<?php echo $ultimo_pedido_favorito['cantidad_entregada']; ?>"
+                                            data-cliente-id="<?php echo $cliente['id']; ?>"
+                                            data-pedido-id="<?php echo $ultimo_pedido_favorito['pedido_id']; ?>"
+                                            data-tooltip="Entregar producto favorito">
+                                            <i class="fas fa-truck me-1"></i>
+                                            Entregar <?php echo htmlspecialchars($cliente['producto_favorito_nombre']); ?>
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="btn btn-secondary btn-sm" disabled data-tooltip="No hay pedidos activos">
+                                            <i class="fas fa-truck me-1"></i>
+                                            Sin pedido activo
+                                        </button>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <button class="btn btn-outline-primary btn-sm"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEditarCliente"
+                                        data-id="<?php echo $cliente['id']; ?>"
+                                        data-nombre="<?php echo htmlspecialchars($cliente['nombre'] ?? ''); ?>"
+                                        data-telefono="<?php echo htmlspecialchars($cliente['telefono']); ?>"
+                                        data-email="<?php echo htmlspecialchars($cliente['email']); ?>"
+                                        data-tooltip="Añadir producto favorito">
+                                        <i class="fas fa-star me-1"></i>
+                                        Definir favorito
+                                    </button>
+                                <?php endif; ?>
+                            </div>
                         </div>
+                    </div>
                     <?php endforeach; ?>
 
                     <?php if (empty($clientes)): ?>
@@ -336,6 +409,7 @@ function formatearCantidad($cantidad) {
 <?php elseif ($mostrar_productos): ?>
     <div class="dashboard animate-fade-in">
         <div class="d-flex justify-content-between align-items-center mb-4">
+            
             <h2><i class="fas fa-boxes me-2"></i>Gestión de Productos</h2>
             <div>
                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
@@ -391,8 +465,8 @@ function formatearCantidad($cantidad) {
 
         <!-- Tabla de productos -->
         <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
+        <table class="table table-striped tabla-clickable tabla-adaptativa">
+        <thead>
                     <tr>
                         <th>ID</th>
                         <th>Nombre</th>
@@ -469,17 +543,24 @@ function formatearCantidad($cantidad) {
             </div>
         </div>
 
-        <?php if (!$ver_todos && $pedido_id): ?>
-            <a href="?cliente_id=<?php echo $cliente_id; ?>&ver_todos=1" class="btn btn-info mb-3">
-                <i class="fas fa-list me-2"></i>
-                Ver todos los pedidos
+        <div class="tabs-simple mb-4">
+            <a href="?cliente_id=<?php echo $cliente_id; ?>&ver_todos=1" class="tab-simple <?php echo $ver_todos ? 'active' : ''; ?>">
+                <i class="fas fa-list me-1"></i>Todos los pedidos
             </a>
-        <?php endif; ?>
+            <?php if ($pedido_id): ?>
+            <a href="?cliente_id=<?php echo $cliente_id; ?>&pedido_id=<?php echo $pedido_id; ?>" class="tab-simple <?php echo (!$ver_todos && $pedido_id) ? 'active' : ''; ?>">
+                <i class="fas fa-eye me-1"></i>Detalles del pedido #<?php echo $pedido_id; ?>
+            </a>
+            <?php endif; ?>
+            <a href="#" class="tab-simple" data-bs-toggle="modal" data-bs-target="#modalNuevoPedido">
+                <i class="fas fa-plus me-1"></i>Nuevo pedido
+            </a>
+        </div>
 
         <?php if ($ver_todos || !$pedido_id): ?>
             <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
+            <table class="table table-striped tabla-clickable tabla-adaptativa">
+            <thead>
                         <tr>
                             <th>ID</th>
                             <th>Estado</th>
@@ -568,8 +649,8 @@ function formatearCantidad($cantidad) {
 
                     <h4 class="mb-3">Productos</h4>
                     <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
+                    <table class="table table-striped tabla-clickable tabla-adaptativa">
+                    <thead>
                                 <tr>
                                     <th>Producto</th>
                                     <th>Precio Unitario</th>
@@ -716,95 +797,117 @@ function formatearCantidad($cantidad) {
     </div>
 </div>
 <!-- Tabla de Resumen de Productos -->
-<div class="dashboard animate-fade-in mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="seccion-colapsable">
+    <div class="seccion-encabezado">
         <h2 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Resumen de Producción</h2>
+        <div>
+            <button type="button" class="btn btn-outline-primary" id="toggleFavoritos" data-show-favs="<?php echo $mostrar_solo_favoritos ? '1' : '0'; ?>">
+                <?php if ($mostrar_solo_favoritos): ?>
+                    <i class="fas fa-th-list me-1"></i>Mostrar Todos
+                <?php else: ?>
+                    <i class="fas fa-star me-1"></i>Mostrar Solo Favoritos
+                <?php endif; ?>
+            </button>
+        </div>
     </div>
+    <div class="seccion-contenido">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;"></th>
+                        <th>Producto</th>
+                        <th class="text-center">Demandados</th>
+                        <th class="text-center">Entregados</th>
+                        <th class="text-center">Realizados</th>
+                        <th class="text-center">Pendientes</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    // Usar la nueva función que soporta filtrado por favoritos
+                    $resumen_productos = obtenerResumenProductosFavoritos($pdo, $mostrar_solo_favoritos);
+                    $total_demandados = 0;
+                    $total_entregados = 0;
+                    $total_realizados = 0;
+                    $total_pendientes = 0;
 
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th class="text-center">Demandados</th>
-                    <th class="text-center">Entregados</th>
-                    <th class="text-center">Realizados</th>
-                    <th class="text-center">Pendientes</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $resumen_productos = obtenerResumenProductos($pdo);
-                $total_demandados = 0;
-                $total_entregados = 0;
-                $total_realizados = 0;
-                $total_pendientes = 0;
+                    foreach ($resumen_productos as $producto):
+                        // Acumular totales
+                        $total_demandados += $producto['cantidad_total'];
+                        $total_entregados += $producto['cantidad_entregada'];
+                        $total_realizados += $producto['cantidad_realizada'];
+                        $total_pendientes += $producto['cantidad_pendiente'];
 
-                foreach ($resumen_productos as $producto):
-                    // Acumular totales
-                    $total_demandados += $producto['cantidad_total'];
-                    $total_entregados += $producto['cantidad_entregada'];
-                    $total_realizados += $producto['cantidad_realizada'];
-                    $total_pendientes += $producto['cantidad_pendiente'];
+                        // Solo mostrar productos con cantidades > 0 o si son favoritos
+                        if ($producto['cantidad_total'] > 0 || $producto['cantidad_realizada'] > 0 || $producto['es_favorito']):
+                    ?>
+                            <tr>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm <?php echo $producto['es_favorito'] ? 'btn-warning' : 'btn-outline-secondary'; ?> btn-toggle-favorito" 
+                                            data-producto-id="<?php echo $producto['id']; ?>"
+                                            data-es-favorito="<?php echo $producto['es_favorito']; ?>"
+                                            data-tooltip="<?php echo $producto['es_favorito'] ? 'Quitar de favoritos' : 'Añadir a favoritos'; ?>">
+                                        <i class="fas fa-star"></i>
+                                    </button>
+                                </td>
+                                <td><?php echo htmlspecialchars($producto['nombre']); ?></td>
+                                <td class="text-center"><?php echo is_float($producto['cantidad_total']) && fmod($producto['cantidad_total'], 1) !== 0.0 ? number_format($producto['cantidad_total'], 3) : number_format($producto['cantidad_total'], 0); ?></td>
+                                <td class="text-center"><?php echo is_float($producto['cantidad_entregada']) && fmod($producto['cantidad_entregada'], 1) !== 0.0 ? number_format($producto['cantidad_entregada'], 3) : number_format($producto['cantidad_entregada'], 0); ?></td>
+                                <td class="text-center">
+                                    <span id="cantidad-realizada-<?php echo $producto['id']; ?>">
+                                        <?php echo is_float($producto['cantidad_realizada']) && fmod($producto['cantidad_realizada'], 1) !== 0.0 ? number_format($producto['cantidad_realizada'], 3) : number_format($producto['cantidad_realizada'], 0); ?>
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span id="cantidad-pendiente-<?php echo $producto['id']; ?>" class="<?php echo $producto['cantidad_pendiente'] > 0 ? 'text-danger fw-bold' : 'text-success'; ?>">
+                                        <?php echo is_float($producto['cantidad_pendiente']) && fmod($producto['cantidad_pendiente'], 1) !== 0.0 ? number_format($producto['cantidad_pendiente'], 3) : number_format($producto['cantidad_pendiente'], 0); ?>
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-primary btn-sm"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalActualizarRealizado"
+                                        data-producto-id="<?php echo $producto['id']; ?>"
+                                        data-producto-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>"
+                                        data-cantidad-total="<?php echo $producto['cantidad_total']; ?>"
+                                        data-cantidad-realizada="<?php echo $producto['cantidad_realizada']; ?>"
+                                        data-tooltip="Actualizar cantidad realizada">
+                                        <i class="fas fa-edit me-1"></i>Actualizar
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php
+                        endif;
+                    endforeach;
 
-                    // Solo mostrar productos con cantidades > 0
-                    if ($producto['cantidad_total'] > 0 || $producto['cantidad_realizada'] > 0):
-                ?>
+                    // Si no hay productos con cantidades
+                    if (empty($resumen_productos) || ($total_demandados == 0 && $total_realizados == 0)):
+                        ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($producto['nombre']); ?></td>
-                            <td class="text-center"><?php echo is_float($producto['cantidad_total']) && fmod($producto['cantidad_total'], 1) !== 0.0 ? number_format($producto['cantidad_total'], 3) : number_format($producto['cantidad_total'], 0); ?></td>
-                            <td class="text-center"><?php echo is_float($producto['cantidad_entregada']) && fmod($producto['cantidad_entregada'], 1) !== 0.0 ? number_format($producto['cantidad_entregada'], 3) : number_format($producto['cantidad_entregada'], 0); ?></td>
-                            <td class="text-center">
-                                <span id="cantidad-realizada-<?php echo $producto['id']; ?>">
-                                    <?php echo is_float($producto['cantidad_realizada']) && fmod($producto['cantidad_realizada'], 1) !== 0.0 ? number_format($producto['cantidad_realizada'], 3) : number_format($producto['cantidad_realizada'], 0); ?>
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <span id="cantidad-pendiente-<?php echo $producto['id']; ?>" class="<?php echo $producto['cantidad_pendiente'] > 0 ? 'text-danger fw-bold' : 'text-success'; ?>">
-                                    <?php echo is_float($producto['cantidad_pendiente']) && fmod($producto['cantidad_pendiente'], 1) !== 0.0 ? number_format($producto['cantidad_pendiente'], 3) : number_format($producto['cantidad_pendiente'], 0); ?>
-                                </span>
-                            </td>
-                            <td class="text-end">
-                                <button class="btn btn-primary btn-sm"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#modalActualizarRealizado"
-                                    data-producto-id="<?php echo $producto['id']; ?>"
-                                    data-producto-nombre="<?php echo htmlspecialchars($producto['nombre']); ?>"
-                                    data-cantidad-total="<?php echo $producto['cantidad_total']; ?>"
-                                    data-cantidad-realizada="<?php echo $producto['cantidad_realizada']; ?>">
-                                    <i class="fas fa-edit me-1"></i>Actualizar
-                                </button>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="fas fa-info-circle text-muted mb-3" style="font-size: 2rem;"></i>
+                                <p class="mb-0">No hay productos pendientes de producción</p>
                             </td>
                         </tr>
-                    <?php
-                    endif;
-                endforeach;
-
-                // Si no hay productos con cantidades
-                if (empty($resumen_productos) || ($total_demandados == 0 && $total_realizados == 0)):
-                    ?>
-                    <tr>
-                        <td colspan="6" class="text-center py-4">
-                            <i class="fas fa-info-circle text-muted mb-3" style="font-size: 2rem;"></i>
-                            <p class="mb-0">No hay productos pendientes de producción</p>
-                        </td>
-                    </tr>
-                <?php else: ?>
-                    <!-- Fila de totales -->
-                    <tr class="table-primary">
-                        <td class="fw-bold">TOTALES</td>
-                        <td class="text-center fw-bold"><?php echo $total_demandados; ?></td>
-                        <td class="text-center fw-bold"><?php echo $total_entregados; ?></td>
-                        <td class="text-center fw-bold"><?php echo $total_realizados; ?></td>
-                        <td class="text-center fw-bold <?php echo $total_pendientes > 0 ? 'text-danger' : 'text-success'; ?>">
-                            <?php echo $total_pendientes; ?>
-                        </td>
-                        <td></td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <?php else: ?>
+                        <!-- Fila de totales -->
+                        <tr class="table-primary">
+                            <td></td>
+                            <td class="fw-bold">TOTALES</td>
+                            <td class="text-center fw-bold"><?php echo is_float($total_demandados) && fmod($total_demandados, 1) !== 0.0 ? number_format($total_demandados, 3) : number_format($total_demandados, 0); ?></td>
+                            <td class="text-center fw-bold"><?php echo is_float($total_entregados) && fmod($total_entregados, 1) !== 0.0 ? number_format($total_entregados, 3) : number_format($total_entregados, 0); ?></td>
+                            <td class="text-center fw-bold"><?php echo is_float($total_realizados) && fmod($total_realizados, 1) !== 0.0 ? number_format($total_realizados, 3) : number_format($total_realizados, 0); ?></td>
+                            <td class="text-center fw-bold <?php echo $total_pendientes > 0 ? 'text-danger' : 'text-success'; ?>">
+                                <?php echo is_float($total_pendientes) && fmod($total_pendientes, 1) !== 0.0 ? number_format($total_pendientes, 3) : number_format($total_pendientes, 0); ?>
+                            </td>
+                            <td></td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -1128,6 +1231,8 @@ function formatearCantidad($cantidad) {
     </div>
 </div>
 
+
+
 <!-- Modal Eliminar Producto -->
 <div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -1300,7 +1405,7 @@ function formatearCantidad($cantidad) {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="post">
+            <form method="post" id="formEntregaParcial">
                 <input type="hidden" name="accion" value="registrar_entrega_parcial">
                 <input type="hidden" name="detalle_pedido_id" id="entrega_parcial_detalle_id">
                 <input type="hidden" name="cliente_id" id="entrega_parcial_cliente_id">
@@ -1313,13 +1418,30 @@ function formatearCantidad($cantidad) {
                         Registrando entrega para: <strong id="entrega_parcial_producto"></strong>
                     </div>
 
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold">Cantidad pedida:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light" id="cantidad_pedida"></span>
+                                <span class="input-group-text"><i class="fas fa-boxes"></i></span>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label fw-bold">Ya entregado:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light" id="cantidad_ya_entregada"></span>
+                                <span class="input-group-text"><i class="fas fa-check-circle"></i></span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
-                        <label for="cantidad_entrega" class="form-label">
-                            <i class="fas fa-box me-2"></i>Cantidad a entregar
+                        <label for="cantidad_entrega" class="form-label fw-bold">
+                            <i class="fas fa-box me-2"></i>Cantidad a entregar ahora
                         </label>
-                        <input type="number" class="form-control" id="cantidad_entrega" name="cantidad"
-                            min="0.001" max="" step="0.001" required>
-                        <small class="text-muted">Unidades disponibles para entregar: <span id="cantidad_disponible"></span></small>
+                        <input type="number" class="form-control form-control-lg" id="cantidad_entrega" name="cantidad"
+                            min="0.001" step="0.001" required>
+                        <small class="text-muted">Unidades disponibles para entregar: <span id="cantidad_disponible" class="fw-bold"></span></small>
                     </div>
 
                     <div class="mb-3">
@@ -1335,7 +1457,7 @@ function formatearCantidad($cantidad) {
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-2"></i>Cancelar
                     </button>
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" class="btn btn-success" id="btnRegistrarEntrega">
                         <i class="fas fa-check me-2"></i>Registrar Entrega
                     </button>
                 </div>
@@ -1343,6 +1465,7 @@ function formatearCantidad($cantidad) {
         </div>
     </div>
 </div>
+
 
 <!-- Modal Corregir Entrega -->
 <div class="modal fade" id="modalCorregirEntrega" tabindex="-1" aria-hidden="true">
@@ -1449,7 +1572,7 @@ function formatearCantidad($cantidad) {
                 const clienteId = button.getAttribute('data-cliente-id');
                 const pedidoId = button.getAttribute('data-pedido-id');
 
-                // Calcular cantidad disponible para entregar
+                // Calcular cantidad disponible para entregar (con 3 decimales)
                 const cantidadDisponible = (cantidadPedida - cantidadEntregada).toFixed(3);
 
                 // Actualizar elementos del modal
@@ -1457,26 +1580,46 @@ function formatearCantidad($cantidad) {
                 document.getElementById('entrega_parcial_producto').textContent = producto;
                 document.getElementById('entrega_parcial_cliente_id').value = clienteId;
                 document.getElementById('entrega_parcial_pedido_id').value = pedidoId;
+                document.getElementById('cantidad_pedida').textContent = cantidadPedida.toFixed(3);
+                document.getElementById('cantidad_ya_entregada').textContent = cantidadEntregada.toFixed(3);
+                document.getElementById('cantidad_disponible').textContent = cantidadDisponible;
 
-                // Configurar campo de cantidad - dejarlo vacío y establecer el valor máximo
+                // Configurar campo de cantidad - sugerir la cantidad pendiente total
                 const inputCantidad = document.getElementById('cantidad_entrega');
                 inputCantidad.max = cantidadDisponible;
                 inputCantidad.min = 0.001; // Para permitir decimales pequeños
-                inputCantidad.value = ''; // Dejamos el campo vacío
-
-                // Mostrar cantidad disponible
-                document.getElementById('cantidad_disponible').textContent = cantidadDisponible;
+                inputCantidad.value = cantidadDisponible; // Sugerir entregar todo lo pendiente
+                inputCantidad.select(); // Seleccionar el valor para facilitar cambios
 
                 // Limpiar el campo de notas
                 document.getElementById('notas_entrega').value = '';
 
                 // Determinar si estamos en la vista de clientes o en la vista de pedidos
-                // Si NO hay un parámetro pedido_id en la URL, estamos en la vista de clientes
                 const urlParams = new URLSearchParams(window.location.search);
                 const enVistaClientes = !urlParams.has('pedido_id');
-
-                // Configurar el campo oculto según la vista actual
                 document.getElementById('entrega_parcial_volver_clientes').value = enVistaClientes ? '1' : '0';
+            });
+
+            // Validación del formulario
+            const formEntregaParcial = document.getElementById('formEntregaParcial');
+            formEntregaParcial.addEventListener('submit', function(event) {
+                const cantidad = parseFloat(document.getElementById('cantidad_entrega').value);
+                const disponible = parseFloat(document.getElementById('cantidad_disponible').textContent);
+                
+                if (isNaN(cantidad) || cantidad <= 0) {
+                    event.preventDefault();
+                    alert('Por favor, ingresa una cantidad válida mayor que cero.');
+                    return false;
+                }
+                
+                if (cantidad > disponible) {
+                    event.preventDefault();
+                    alert('La cantidad a entregar no puede ser mayor que la cantidad disponible.');
+                    return false;
+                }
+                
+                // Si todo está correcto, permitir el envío del formulario
+                return true;
             });
         }
 
@@ -1565,6 +1708,40 @@ function formatearCantidad($cantidad) {
                 document.getElementById('eliminar_cliente_nombre').textContent = clienteNombre;
             });
         }
+        const clienteCards = document.querySelectorAll('.cliente-card');
+    
+    clienteCards.forEach(card => {
+        // Obtener el enlace de "Ver Pedidos" dentro de la tarjeta
+        const verPedidosLink = card.querySelector('a[href*="cliente_id"]');
+        
+        if (verPedidosLink) {
+            // Obtener la URL del enlace
+            const linkUrl = verPedidosLink.getAttribute('href');
+            
+            // Hacer que toda la tarjeta sea clickable
+            card.style.cursor = 'pointer';
+            card.addEventListener('click', function(event) {
+                // Prevenir que el click se propague a los botones de acción dentro de la tarjeta
+                if (!event.target.closest('.cliente-acciones') && 
+                    !event.target.closest('.btn-toggle-favorito') && 
+                    !event.target.closest('.btn-outline-primary') && 
+                    !event.target.closest('.btn-success')) {
+                    window.location.href = linkUrl;
+                }
+            });
+            
+            // Efecto visual al pasar el cursor
+            card.addEventListener('mouseenter', function() {
+                if (!card.classList.contains('hover-active')) {
+                    card.classList.add('hover-active');
+                }
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                card.classList.remove('hover-active');
+            });
+        }
+    });
 
         // Modal Editar Pedido
         const modalEditarPedido = document.getElementById('modalEditarPedido');
@@ -1694,6 +1871,202 @@ function formatearCantidad($cantidad) {
                 }
             });
         }
+
+        const tablasClickables = document.querySelectorAll('.tabla-clickable');
+    tablasClickables.forEach(tabla => {
+        const filas = tabla.querySelectorAll('tbody tr');
+        
+        filas.forEach(fila => {
+            const enlace = fila.querySelector('a');
+            if (enlace) {
+                const url = enlace.getAttribute('href');
+                
+                fila.style.cursor = 'pointer';
+                fila.addEventListener('click', function(event) {
+                    // Solo navegar si no se hizo click en un botón o enlace
+                    if (!event.target.closest('button') && !event.target.closest('a')) {
+                        window.location.href = url;
+                    }
+                });
+            }
+        });
+    });
+
+    const seccionesColapsables = document.querySelectorAll('.seccion-colapsable');
+    seccionesColapsables.forEach(seccion => {
+        const encabezado = seccion.querySelector('.seccion-encabezado');
+        const contenido = seccion.querySelector('.seccion-contenido');
+        
+        if (encabezado && contenido) {
+            encabezado.style.cursor = 'pointer';
+            
+            // Añadir icono de toggle
+            const toggleIcon = document.createElement('i');
+            toggleIcon.className = 'fas fa-chevron-down ms-2';
+            encabezado.appendChild(toggleIcon);
+            
+            encabezado.addEventListener('click', function() {
+                // Toggle de la visibilidad del contenido
+                if (contenido.style.display === 'none') {
+                    contenido.style.display = 'block';
+                    toggleIcon.className = 'fas fa-chevron-down ms-2';
+                    seccion.classList.remove('collapsed');
+                } else {
+                    contenido.style.display = 'none';
+                    toggleIcon.className = 'fas fa-chevron-right ms-2';
+                    seccion.classList.add('collapsed');
+                }
+            });
+        }
+    });
+    // Mejorar la interacción con los formularios
+    const formulariosInteractivos = document.querySelectorAll('form.form-interactivo');
+    formulariosInteractivos.forEach(form => {
+        const inputs = form.querySelectorAll('input, select, textarea');
+        
+        inputs.forEach(input => {
+            // Destacar el campo activo
+            input.addEventListener('focus', function() {
+                this.closest('.mb-3').classList.add('campo-activo');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.closest('.mb-3').classList.remove('campo-activo');
+            });
+            
+            // Validación en tiempo real
+            input.addEventListener('input', function() {
+                if (this.required && this.value.trim() === '') {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                }
+            });
+        });
+    });
+
+        const toggleFavoritosBtn = document.getElementById('toggleFavoritos');
+    if (toggleFavoritosBtn) {
+        toggleFavoritosBtn.addEventListener('click', function() {
+            // Leer el estado actual del botón
+            const mostrarSoloFavoritos = toggleFavoritosBtn.getAttribute('data-show-favs') === '1';
+            // Navegar a la URL con el parámetro invertido
+            window.location.href = 'index.php?mostrar_solo_favoritos=' + (mostrarSoloFavoritos ? '0' : '1');
+        });
+    }
+        // Funcionalidad para el buscador de clientes
+        const buscador = document.getElementById('buscadorClientes');
+    if (buscador) {
+        buscador.addEventListener('input', function() {
+            const texto = this.value.toLowerCase().trim();
+            const tarjetas = document.querySelectorAll('.cliente-card');
+            
+            tarjetas.forEach(tarjeta => {
+                const nombreCliente = tarjeta.querySelector('.cliente-name').textContent.toLowerCase();
+                const telefonoElement = tarjeta.querySelector('.cliente-contact:nth-child(2)');
+                const emailElement = tarjeta.querySelector('.cliente-contact:nth-child(3)');
+                
+                const telefono = telefonoElement ? telefonoElement.textContent.toLowerCase() : '';
+                const email = emailElement ? emailElement.textContent.toLowerCase() : '';
+                
+                const productoFavoritoElement = tarjeta.querySelector('.badge');
+                const productoFavorito = productoFavoritoElement ? productoFavoritoElement.textContent.toLowerCase() : '';
+                
+                if (nombreCliente.includes(texto) || 
+                    telefono.includes(texto) || 
+                    email.includes(texto) ||
+                    productoFavorito.includes(texto)) {
+                    tarjeta.closest('.col-md-6').style.display = '';
+                } else {
+                    tarjeta.closest('.col-md-6').style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Menú móvil
+    const menuToggle = document.getElementById('menuToggle');
+    const menuClose = document.getElementById('menuClose');
+    const menuBackdrop = document.getElementById('menuBackdrop');
+    const mobileMenu = document.getElementById('mobileMenu');
+    
+    if (menuToggle) {
+        menuToggle.addEventListener('click', function() {
+            mobileMenu.classList.add('show');
+            menuBackdrop.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        });
+    }
+    
+    if (menuClose) {
+        menuClose.addEventListener('click', function() {
+            mobileMenu.classList.remove('show');
+            menuBackdrop.classList.remove('show');
+            document.body.style.overflow = '';
+        });
+    }
+    
+    if (menuBackdrop) {
+        menuBackdrop.addEventListener('click', function() {
+            mobileMenu.classList.remove('show');
+            menuBackdrop.classList.remove('show');
+            document.body.style.overflow = '';
+        });
+    }
+    
+    // Tooltips personalizados
+    const elementosConTooltip = document.querySelectorAll('[data-tooltip]');
+    elementosConTooltip.forEach(elemento => {
+        elemento.classList.add('tooltip-personalizado');
+    });
+    
+    // Manejar el redimensionamiento para evitar problemas de menú en diferentes orientaciones
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            mobileMenu.classList.remove('show');
+            menuBackdrop.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    });
+    
+    // Botones para marcar/desmarcar productos como favoritos
+    const btnsFavorito = document.querySelectorAll('.btn-toggle-favorito');
+    btnsFavorito.forEach(btn => {
+        btn.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Cambiar apariencia inmediatamente (antes de la petición AJAX)
+            const esFavorito = this.getAttribute('data-es-favorito') === '1';
+            this.classList.toggle('btn-warning');
+            this.classList.toggle('btn-outline-secondary');
+            this.setAttribute('data-es-favorito', !esFavorito ? '1' : '0');
+            
+            // Proceder con la petición AJAX original
+            const productoId = this.getAttribute('data-producto-id');
+            
+            fetch('index.php?ajax=toggle_favorito&producto_id=' + productoId + '&es_favorito=' + (!esFavorito ? 1 : 0))
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        // Si falla, revertir los cambios visuales
+                        console.error('Error al cambiar estado de favorito');
+                        this.classList.toggle('btn-warning');
+                        this.classList.toggle('btn-outline-secondary');
+                        this.setAttribute('data-es-favorito', esFavorito ? '1' : '0');
+                    }
+                })
+                .catch(error => {
+                    // Si falla, revertir los cambios visuales
+                    console.error('Error:', error);
+                    this.classList.toggle('btn-warning');
+                    this.classList.toggle('btn-outline-secondary');
+                    this.setAttribute('data-es-favorito', esFavorito ? '1' : '0');
+                    alert('Ha ocurrido un error al cambiar el estado del favorito');
+                });
+        });
+    });
     });
 </script>
 </body>
