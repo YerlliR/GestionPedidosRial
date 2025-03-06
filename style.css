@@ -1,0 +1,1413 @@
+/* =========================================
+   SISTEMA DE GESTIÓN DE PEDIDOS - CSS OPTIMIZADO
+   ========================================= */
+
+   :root {
+    /* Paleta de colores principal */
+    --primary-color: #2563eb;         /* Azul principal */
+    --primary-dark: #1d4ed8;          /* Azul oscuro para hover */
+    --primary-light: #dbeafe;         /* Azul claro para fondos */
+    
+    /* Colores secundarios */
+    --secondary-color: #10b981;       /* Verde para acciones positivas */
+    --secondary-dark: #059669;        /* Verde oscuro para hover */
+    --secondary-light: #d1fae5;       /* Verde claro para fondos */
+    
+    /* Colores de alerta */
+    --danger-color: #ef4444;          /* Rojo para acciones negativas */
+    --warning-color: #f59e0b;         /* Amarillo para advertencias */
+    --info-color: #0ea5e9;            /* Azul claro para información */
+    
+    /* Colores neutros */
+    --background-light: #f9fafb;      /* Fondo general claro */
+    --background-white: #ffffff;      /* Blanco puro */
+    --text-dark: #1f2937;             /* Texto principal oscuro */
+    --text-muted: #6b7280;            /* Texto secundario */
+    --border-color: #e5e7eb;          /* Color de bordes */
+    
+    /* Tamaños y espaciados */
+    --border-radius-sm: 0.375rem;     /* 6px */
+    --border-radius: 0.5rem;          /* 8px */
+    --border-radius-lg: 0.75rem;      /* 12px */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --transition: all 0.3s ease;
+    --spacing-xs: 0.25rem;   /* 4px */
+    --spacing-sm: 0.5rem;    /* 8px */
+    --spacing-md: 1rem;      /* 16px */
+    --spacing-lg: 1.5rem;    /* 24px */
+    --spacing-xl: 2rem;      /* 32px */
+    
+    /* Estado badges */
+    --state-pendiente-bg: #fef3c7;    /* Amarillo claro */
+    --state-pendiente-text: #92400e;  /* Amarillo oscuro */
+    --state-en-proceso-bg: #dbeafe;   /* Azul claro */
+    --state-en-proceso-text: #1e40af; /* Azul oscuro */
+    --state-parcial-bg: #f3e8ff;      /* Púrpura claro */
+    --state-parcial-text: #6d28d9;    /* Púrpura oscuro */
+    --state-completado-bg: #d1fae5;   /* Verde claro */
+    --state-completado-text: #065f46; /* Verde oscuro */
+}
+
+/* =========================================
+   ESTILOS BASE
+   ========================================= */
+body {
+    background-color: var(--background-light);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: var(--text-dark);
+    line-height: 1.6;
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.container {
+    width: 100%;
+    max-width: 1400px;
+    padding: var(--spacing-md);
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--text-dark);
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+h2 {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+}
+
+h3 {
+    font-size: 1.25rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+a:hover {
+    color: var(--primary-dark);
+}
+
+/* =========================================
+   LAYOUT Y TARJETAS
+   ========================================= */
+.dashboard {
+    background-color: var(--background-white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+}
+
+.card {
+    background-color: var(--background-white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: var(--spacing-lg);
+    border: none;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.card-body {
+    padding: var(--spacing-lg);
+}
+
+/* =========================================
+   BOTONES
+   ========================================= */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    border: none;
+    font-size: 0.875rem;
+    text-align: center;
+    line-height: 1.5;
+    touch-action: manipulation;
+}
+
+.btn i {
+    margin-right: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover, .btn-primary:active {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-secondary:hover, .btn-secondary:active {
+    background-color: var(--secondary-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover, .btn-danger:active {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-warning {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.btn-warning:hover, .btn-warning:active {
+    background-color: #d97706;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-outline-primary {
+    background-color: transparent;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-outline-primary:hover, .btn-outline-primary:active {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-outline-secondary {
+    background-color: transparent;
+    border: 1px solid var(--secondary-color);
+    color: var(--secondary-color);
+}
+
+.btn-outline-secondary:hover, .btn-outline-secondary:active {
+    background-color: var(--secondary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* =========================================
+   TABLAS
+   ========================================= */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+.table thead th {
+    background-color: var(--primary-color);
+    color: white;
+    padding: var(--spacing-md);
+    text-align: left;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.table tbody tr:hover {
+    background-color: var(--primary-light);
+}
+
+.table tbody td {
+    padding: var(--spacing-md);
+    vertical-align: middle;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-striped tbody tr:hover {
+    background-color: var(--primary-light);
+}
+
+/* Tabla clickable */
+.tabla-clickable tbody tr {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.tabla-clickable tbody tr:hover {
+    background-color: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 1;
+}
+
+/* =========================================
+   FORMULARIOS
+   ========================================= */
+.form-label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--text-dark);
+    background-color: var(--background-white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+.form-select {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--text-dark);
+    background-color: var(--background-white);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    transition: var(--transition);
+}
+
+.form-select:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+/* Campos de formulario activos */
+.campo-activo label {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.campo-activo .form-control,
+.campo-activo .form-select {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+/* =========================================
+   BADGES Y ETIQUETAS
+   ========================================= */
+.badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 50rem;
+}
+
+.badge-estado {
+    padding: 0.5em 0.85em;
+    border-radius: 50rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7em;
+    letter-spacing: 0.5px;
+}
+
+.badge-pendiente {
+    background-color: var(--state-pendiente-bg);
+    color: var(--state-pendiente-text);
+}
+
+.badge-en_proceso {
+    background-color: var(--state-en-proceso-bg);
+    color: var(--state-en-proceso-text);
+}
+
+.badge-parcial {
+    background-color: var(--state-parcial-bg);
+    color: var(--state-parcial-text);
+}
+
+.badge-completado {
+    background-color: var(--state-completado-bg);
+    color: var(--state-completado-text);
+}
+
+/* =========================================
+   MODALES
+   ========================================= */
+.modal-content {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.modal-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: none;
+}
+
+.modal-title {
+    font-weight: 600;
+    margin-bottom: 0;
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+.modal-footer {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    background-color: #f9fafb;
+}
+
+/* =========================================
+   NAVEGACIÓN
+   ========================================= */
+.navbar {
+    background-color: var(--primary-color);
+    padding: var(--spacing-md) var(--spacing-lg);
+    box-shadow: var(--shadow);
+    margin-bottom: var(--spacing-lg);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    padding: var(--spacing-sm) var(--spacing-md);
+    transition: var(--transition);
+    border-radius: var(--border-radius-sm);
+}
+
+.nav-link:hover, .nav-link:active {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Menú móvil */
+.navbar-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 250px;
+    background-color: white;
+    z-index: 1001;
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    padding: 1rem;
+    visibility: hidden;
+}
+
+.navbar-menu.show {
+    transform: translateX(0);
+    visibility: visible;
+}
+
+.navbar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.navbar-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+.navbar-menu .nav-link {
+    color: #333;
+    padding: 0.5rem 0;
+    border-radius: 0;
+    transition: background-color 0.3s ease;
+}
+
+/* =========================================
+   ALERTAS Y NOTIFICACIONES
+   ========================================= */
+.alert {
+    position: relative;
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    border: 1px solid transparent;
+    border-radius: var(--border-radius);
+}
+
+.alert-success {
+    color: #0f5132;
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+}
+
+.alert-danger {
+    color: #842029;
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+}
+
+.alert-warning {
+    color: #664d03;
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+}
+
+.alert-info {
+    color: #055160;
+    background-color: #cff4fc;
+    border-color: #b6effb;
+}
+
+/* =========================================
+   TARJETAS DE CLIENTE
+   ========================================= */
+.cliente-card {
+    position: relative;
+    background-color: var(--background-white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+}
+
+.cliente-card:hover, 
+.cliente-card.hover-active {
+    border-color: var(--primary-color);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.cliente-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--border-radius);
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.cliente-card:hover::after {
+    box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.cliente-info {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+}
+
+.cliente-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    flex-shrink: 0;
+}
+
+.cliente-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.cliente-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    word-wrap: break-word;
+}
+
+.cliente-contact {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Botones de acción del cliente */
+.cliente-acciones {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    display: flex;
+    gap: 0.5rem;
+    z-index: 20;
+}
+
+.btn-cliente-accion {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: var(--transition);
+    background-color: var(--background-light);
+    box-shadow: var(--shadow-sm);
+    opacity: 1;
+}
+
+.btn-cliente-accion:hover, .btn-cliente-accion:active {
+    transform: scale(1.1);
+    background-color: var(--background-white);
+    box-shadow: var(--shadow);
+}
+
+.btn-cliente-accion.btn-warning {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: var(--warning-color);
+}
+
+.btn-cliente-accion.btn-danger {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: var(--danger-color);
+}
+
+.btn-cliente-accion.btn-warning:hover, .btn-cliente-accion.btn-warning:active {
+    background-color: var(--warning-color);
+    color: white;
+}
+
+.btn-cliente-accion.btn-danger:hover, .btn-cliente-accion.btn-danger:active {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* =========================================
+   PROGRESO Y GRÁFICOS
+   ========================================= */
+.progress {
+    display: flex;
+    height: 0.5rem;
+    overflow: hidden;
+    font-size: 0.75rem;
+    background-color: #e5e7eb;
+    border-radius: 0.25rem;
+}
+
+.progress-bar {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--primary-color);
+    transition: width 0.6s ease;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+}
+
+/* =========================================
+   SECCIONES COLAPSABLES
+   ========================================= */
+.seccion-colapsable {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.seccion-encabezado {
+    background-color: var(--background-light);
+    padding: 1rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.seccion-encabezado:hover {
+    background-color: var(--primary-light);
+}
+
+.seccion-contenido {
+    padding: 1rem;
+}
+
+.seccion-colapsable.collapsed {
+    margin-bottom: 0.5rem;
+}
+
+/* =========================================
+   PESTAÑAS SIMPLIFICADAS
+   ========================================= */
+.tabs-simple {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.tabs-simple::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-simple {
+    padding: 0.75rem 1.25rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    position: relative;
+    white-space: nowrap;
+}
+
+.tab-simple.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.tab-simple.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: var(--primary-color);
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+}
+
+/* =========================================
+   BARRA DE BÚSQUEDA
+   ========================================= */
+.search-bar {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.search-bar input {
+    padding-left: 2.5rem;
+    border-radius: 50px;
+    border: 1px solid var(--border-color);
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+    border-color: var(--primary-color);
+}
+
+.search-bar i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+/* =========================================
+   TOOLTIP PERSONALIZADO
+   ========================================= */
+.tooltip-personalizado {
+    position: relative;
+}
+
+.tooltip-personalizado:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--text-dark);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 100;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip-personalizado:hover::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% - 5px);
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--text-dark) transparent transparent transparent;
+    z-index: 100;
+}
+
+/* =========================================
+   ANIMACIONES
+   ========================================= */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* =========================================
+   UTILIDADES
+   ========================================= */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.d-flex {
+    display: flex !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+.justify-content-between {
+    justify-content: space-between !important;
+}
+
+.gap-1 {
+    gap: 0.25rem !important;
+}
+
+.gap-2 {
+    gap: 0.5rem !important;
+}
+
+.gap-3 {
+    gap: 1rem !important;
+}
+
+.m-0 {
+    margin: 0 !important;
+}
+
+.mb-1 {
+    margin-bottom: 0.25rem !important;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem !important;
+}
+
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+.mt-auto {
+    margin-top: auto !important;
+}
+
+.p-2 {
+    padding: 0.5rem !important;
+}
+
+.p-3 {
+    padding: 1rem !important;
+}
+
+.p-4 {
+    padding: 1.5rem !important;
+}
+
+.rounded {
+    border-radius: var(--border-radius) !important;
+}
+
+.shadow-sm {
+    box-shadow: var(--shadow-sm) !important;
+}
+
+.shadow {
+    box-shadow: var(--shadow) !important;
+}
+
+.shadow-lg {
+    box-shadow: var(--shadow-lg) !important;
+}
+
+.w-100 {
+    width: 100% !important;
+}
+
+.h-100 {
+    height: 100% !important;
+}
+
+/* =========================================
+   MEDIA QUERIES PARA RESPONSIVE
+   ========================================= */
+/* =========================================
+   MEDIA QUERIES PARA RESPONSIVE (MEJORADAS)
+   ========================================= */
+   @media (max-width: 767px) {
+    /* Navegación móvil */
+    .menu-toggle {
+        display: block;
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        margin-left: 1rem;
+        cursor: pointer;
+    }
+    
+    /* Contenedor general */
+    .container {
+        padding: 0.5rem;
+        width: 100%;
+    }
+
+    /* Títulos y encabezados */
+    h1 {
+        font-size: 1.4rem;
+        margin-bottom: 1rem;
+    }
+
+    h2 {
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Botones */
+    .btn {
+        padding: 0.375rem 0.625rem;
+        font-size: 0.8rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    /* Tarjetas */
+    .card, .dashboard {
+        padding: 0.75rem;
+    }
+
+    .card-header {
+        padding: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    /* Tablas adaptativas */
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+
+    .tabla-adaptativa thead {
+        display: none;
+    }
+    
+    .tabla-adaptativa tbody tr {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        padding: 0.5rem;
+    }
+    
+    .tabla-adaptativa tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.375rem 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .tabla-adaptativa tbody td:last-child {
+        border-bottom: none;
+    }
+    
+    .tabla-adaptativa tbody td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        margin-right: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    /* Cliente cards */
+    .cliente-card {
+        padding: 0.75rem;
+    }
+
+    .cliente-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+    }
+
+    .cliente-name {
+        font-size: 1rem;
+    }
+
+    .cliente-contact {
+        font-size: 0.8rem;
+    }
+
+    .cliente-acciones {
+        position: static;
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 0.5rem;
+    }
+
+    .btn-cliente-accion {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    /* Modales */
+    .modal-dialog {
+        margin: 1.75rem 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    /* Inputs y formularios */
+    .form-control, .form-select {
+        font-size: 0.9rem;
+        padding: 0.375rem 0.625rem;
+    }
+
+    /* Espaciado y márgenes */
+    .mb-3, .mb-4 {
+        margin-bottom: 0.75rem;
+    }
+
+    .mt-3, .mt-4 {
+        margin-top: 0.75rem;
+    }
+
+    /* Tooltips y elementos flotantes */
+    .tooltip-personalizado:hover::after {
+        font-size: 0.7rem;
+        padding: 0.375rem;
+    }
+}
+
+/* Ajustes adicionales para pantallas muy pequeñas */
+@media (max-width: 375px) {
+    body {
+        font-size: 14px;
+    }
+
+    .container {
+        padding: 0.25rem;
+    }
+
+    h1 {
+        font-size: 1.2rem;
+    }
+
+    h2 {
+        font-size: 1rem;
+    }
+
+    .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .cliente-card {
+        padding: 0.5rem;
+    }
+
+    .cliente-avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 0.8rem;
+    }
+
+    .cliente-name {
+        font-size: 0.9rem;
+    }
+
+    .cliente-contact {
+        font-size: 0.7rem;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+
+    .form-control, .form-select {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Orientación horizontal en dispositivos pequeños */
+@media (max-width: 767px) and (orientation: landscape) {
+    .modal-dialog {
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+}
+
+
+
+
+
+    /* Estilos mejorados para la barra de progreso */
+    .progress {
+        height: 0.6rem;
+        background-color: #e9ecef;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .progress-bar {
+        background-color: #0dcaf0; /* Color azul info de Bootstrap */
+        background-image: linear-gradient(45deg, 
+                          rgba(255,255,255,.15) 25%, 
+                          transparent 25%, 
+                          transparent 50%, 
+                          rgba(255,255,255,.15) 50%, 
+                          rgba(255,255,255,.15) 75%, 
+                          transparent 75%, 
+                          transparent);
+        background-size: 1rem 1rem;
+        transition: width 0.6s ease;
+    }
+    
+    /* Mejoramos el estilo del badge para 'Producto entregado' */
+    .bg-info {
+        background-color: #0dcaf0 !important;
+        color: #fff;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(13, 202, 240, 0.3);
+    }
+    
+    /* Estilos para el tooltip mejorado */
+    [title] {
+        position: relative;
+        cursor: help;
+    }
+
+
+
+
+
+
+    /* Mejoras para botones en móvil - aumentar tamaño táctil */
+@media (max-width: 767px) {
+    /* Hacer los botones más grandes y fáciles de pulsar en móvil */
+    .btn-cliente-accion {
+        width: 44px !important;
+        height: 44px !important;
+        font-size: 1rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Asegurar que los iconos estén centrados */
+    .btn-cliente-accion i {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    
+    /* Aumentar el padding de todos los botones en móvil */
+    .btn {
+        padding: 0.6rem 1rem !important;
+        margin-bottom: 0.3rem;
+    }
+    
+    /* Aumentar el espaciado entre botones */
+    .cliente-acciones {
+        display: flex;
+        gap: 0.7rem !important;
+    }
+    
+    /* Hacer que los botones de acción sean más anchos */
+    .btn-sm {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* Separar los botones de acción en filas de detalle de pedido */
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        margin-right: 0;
+    }
+    
+    /* Aumentar el espacio entre filas en tablas */
+    .table td, .table th {
+        padding: 0.75rem 0.5rem !important;
+    }
+}
+
+/* Mejorar centrado de iconos en los botones de acción del cliente en todas las resoluciones */
+.btn-cliente-accion {
+    position: relative;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.btn-cliente-accion i {
+    margin: 0 !important;
+}
+
+/* Estilos para botones y badges cuando un producto favorito está entregado pero el pedido no */
+.badge.producto-entregado {
+    background-color: #0dcaf0 !important; /* Azul informativo */
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 0.5em 0.85em !important;
+}
+
+.badge.pedido-pendiente {
+    background-color: #e9ecef !important; /* Gris claro */
+    color: #212529 !important;
+    border: 1px solid #ced4da !important;
+}
+
+/* Mejorar visibilidad del estado "Producto entregado" */
+.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+
+
+
+
+/* Mejoras para botones en dispositivos móviles */
+@media (max-width: 767px) {
+    /* Incrementar el tamaño de los botones de acción para facilitar la pulsación */
+    .btn-cliente-accion {
+        width: 44px !important;
+        height: 44px !important;
+        font-size: 1rem !important;
+        padding: 0 !important;
+    }
+    
+    /* Centrar correctamente los iconos dentro de los botones */
+    .btn-cliente-accion i {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+    }
+    
+    /* Aumentar el espacio entre los botones de acción */
+    .cliente-acciones {
+        display: flex;
+        gap: 10px !important;
+    }
+    
+    /* Mejorar botones en tablas */
+    td .btn {
+        padding: 0.6rem 0.8rem !important;
+        font-size: 0.9rem !important;
+        margin-bottom: 5px;
+        display: block;
+        width: 100%;
+    }
+    
+    /* Convertir los grupos de botones a columnas en móvil */
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 5px;
+        border-radius: 0.25rem !important;
+    }
+    
+    /* Aumentar espaciado en filas de tabla */
+    .table td {
+        padding: 0.75rem 0.5rem;
+    }
+}
